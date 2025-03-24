@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -g -mmmx -msse -mpclmul -msse4.2 -DINTEL_SSE4 -mavx -rdynamic CMakeFiles/ECClient.dir/ECClient.cc.o -o ../ECClient  common/libcommon.a -lpthread ec/libec.a -lisal protocol/libprotocol.a util/libutil.a -lhiredis -lgf_complete 
