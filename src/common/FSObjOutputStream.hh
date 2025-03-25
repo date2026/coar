@@ -3,9 +3,10 @@
 
 #include "BlockingQueue.hh"
 #include "../common/Config.hh"
-#include "../common/OECDataPacket.hh"
+#include "../common/ECDataPacket.hh"
 #include "../fs/UnderFS.hh"
 #include "../inc/include.hh"
+#include "../util/RedisUtil.hh"
 
 using namespace std;
 
@@ -13,7 +14,7 @@ class FSObjOutputStream {
   private:
     Config* _conf;
     string _objname;
-    BlockingQueue<OECDataPacket*>* _queue;
+    BlockingQueue<ECDataPacket*>* _queue;
     int _totalPktNum;
     int _dataPktNum;
     bool _finish;
@@ -27,9 +28,9 @@ class FSObjOutputStream {
     FSObjOutputStream(Config* conf, string objname, UnderFS* fs, int pktnum);
     ~FSObjOutputStream();
     void writeObj();
-    void enqueue(OECDataPacket* pkt);
+    void enqueue(ECDataPacket* pkt);
     bool getFinish();
-    BlockingQueue<OECDataPacket*>* getQueue(); 
+    BlockingQueue<ECDataPacket*>* getQueue(); 
 };
 
 #endif

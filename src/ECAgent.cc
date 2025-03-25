@@ -1,5 +1,5 @@
 #include "common/Config.hh"
-#include "common/OECWorker.hh"
+#include "common/ECWorker.hh"
 
 #include "inc/include.hh"
 
@@ -11,11 +11,11 @@ int main(int argc, char** argv) {
 	Config* conf = new Config(confPath);
 	conf->DumpConfig();
 	
-	OECWorker** workers = (OECWorker**)calloc(conf -> _agWorkerThreadNum, sizeof(OECWorker*)); 
+	ECWorker** workers = (ECWorker**)calloc(conf -> _agWorkerThreadNum, sizeof(ECWorker*)); 
 
 	std::thread thrds[conf -> _agWorkerThreadNum];
 	for (int i = 0; i < conf -> _agWorkerThreadNum; i++) {
-		workers[i] = new OECWorker(conf);
+		workers[i] = new ECWorker(conf);
 		thrds[i] = thread([=]{ workers[i]->doProcess(); });
 	}
 	

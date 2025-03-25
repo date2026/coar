@@ -1,5 +1,5 @@
 #include "common/Config.hh"
-#include "common/OECOutputStream.hh"
+#include "common/ECOutputStream.hh"
 void usage() {
     std::cout << "usage: ./OECClient write filepath saveas ecid size(MB)" << std::endl;
     std::cout << "       ./OECClient read filename saveas" << std::endl;
@@ -52,7 +52,7 @@ void write(const std::string& filePath, const std::string& saveAs, const std::st
     FILE* inputfile = fopen(filePath.c_str(), "rb");
     assert(inputfile != NULL && "Failed to open file");
 
-    OECOutputStream* outstream = new OECOutputStream(conf, saveAs, ecidpool, "offline", sizeinMB);
+    ECOutputStream* outstream = new ECOutputStream(conf, saveAs, ecidpool, "offline", sizeinMB);
 
 
     int sizeinByte = sizeinMB * 1024 * 1024;

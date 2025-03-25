@@ -17,17 +17,12 @@ int main() {
     assert(writeSize == buf.size() && "Failed to write to file");
 
 
-    while(true) {
-
-
-
-    }
     assert(hdfsCloseFile(fs, file) == 0);
     assert(hdfsDisconnect(fs) == 0);   
 
 
     fs = hdfsConnect("192.168.220.160", 9000);
-    file = hdfsOpenFile(fs, "/test", O_RDONLY, 0, 0, 0);
+    file = hdfsOpenFile(fs, "/test1", O_RDONLY, 0, 0, 0);
 
     char buffer[4096];
     memset(buffer, 0, 4096);
