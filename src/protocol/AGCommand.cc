@@ -30,6 +30,7 @@ AGCommand::AGCommand(char* reqStr) {
     case 7: resolveType7(); break;
     case 10: resolveType10(); break;
     case 11: resolveType11(); break;
+    case 12: resolveType12(); break;
     default: break;
   }
   _agCmd = nullptr;
@@ -495,19 +496,38 @@ void AGCommand::resolveType10() {
 
 void AGCommand::buildType11(int type,
                             int objnum,
-                            int basesizeMB) {
-  _type = type;
-  _objnum = objnum;
-  _basesizeMB = basesizeMB;
+                            int basesizeMB,
+                            std::vector<int> objLocs) {
+	_type = type;
+	_objnum = objnum;
+	_basesizeMB = basesizeMB;
 
-  writeInt(_type);
-  writeInt(_objnum);
-  writeInt(_basesizeMB);
+	writeInt(_type);
+	writeInt(_objnum);
+	writeInt(_basesizeMB);
+	assert(objLocs.size() == _objnum);
+	for (int i = 0; i < _objnum; i++) {
+		writeInt(objLocs[i]);
+	}
 }
 
 void AGCommand::resolveType11() {
-  _objnum = readInt();
-  _basesizeMB = readInt();
+	_objnum = readInt();
+	_basesizeMB = readInt();
+	for (int i = 0; i < _objnum; i++) {
+		_objLocs.push_back(readInt());
+	}
+}
+
+void AGCommand::buildType12(int type, const std::string& objname) {
+    _type = type;
+	_filename = objname;
+    writeInt(_type);
+	writeString(_filename);
+}
+
+void AGCommand::resolveType12() {
+	_filename = readString();
 }
 
 void AGCommand::dump() {

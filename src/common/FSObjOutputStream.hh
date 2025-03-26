@@ -7,11 +7,12 @@
 #include "../fs/UnderFS.hh"
 #include "../inc/include.hh"
 #include "../util/RedisUtil.hh"
+#include "../protocol/AGCommand.hh"
 
 using namespace std;
 
 class FSObjOutputStream {
-  private:
+private:
     Config* _conf;
     string _objname;
     BlockingQueue<ECDataPacket*>* _queue;
@@ -24,7 +25,7 @@ class FSObjOutputStream {
     UnderFS* _underfs;
     UnderFile* _underfile;
 
-  public:
+public:
     FSObjOutputStream(Config* conf, string objname, UnderFS* fs, int pktnum);
     ~FSObjOutputStream();
     void writeObj();

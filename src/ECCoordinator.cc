@@ -10,7 +10,7 @@ using namespace std;
 int main(int argc, char** argv) {
 	const std::string confPath = "/home/openec/lmq_openec/conf/1.json";
 	Config* conf = new Config(confPath);
-	StripeStore* ss; 
+	StripeStore* ss = new StripeStore(conf); 
 
 
 	Coordinator** coors = (Coordinator**)calloc(conf->_coorThreadNum, sizeof(Coordinator*));

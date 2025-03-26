@@ -37,31 +37,33 @@ void Coordinator::doProcess() {
 void Coordinator::registerFile(CoorCommand* coorCmd) {
 	unsigned int clientIp = coorCmd->getClientip();
 	string filename = coorCmd->getFilename();
-	string ecid = coorCmd->getEcid();
+	string ecpoolid = coorCmd->getEcid();
 	int mode = coorCmd->getMode();
 	int filesizeMB = coorCmd->getFilesizeMB();
 
-	registerOfflineEC(clientIp, filename, ecid, filesizeMB);
-}
-
-void Coordinator::registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB) {
 	LOG_INFO("Coordinator::registerOfflineEC, filename: %s, ecpoolid: %s, filesizeMB: %d", filename.c_str(), ecpoolid.c_str(), filesizeMB);
 	struct timeval time1, time2, time3, time4;
 		
-	int basesizeMB = _conf->_objSize;
-	LOG_INFO("basesizeMB: %d", basesizeMB);
+	int objSize = _conf->_objSize;
 	
-	assert(filesizeMB % basesizeMB == 0);
-	int objnum = filesizeMB / basesizeMB;
+	assert(filesizeMB % objSize == 0);
+	int objnum = filesizeMB / objSize;
 
 
+	// 1. ensure file not exist
+	assert(!_stripeStore->existFile(filename));
+	LOG_INFO("check file: %s exist done", filename.c_str());
+
+	// 2. create file recipe, get ojblocs
+	std::vector<int> objLocs = _stripeStore->insertFile(filename, objnum);
+	LOG_INFO("register file: %s, objnum: %d, objSize: %d, objLocs: %s", filename.c_str(), objnum, objSize, vec2String(objLocs).c_str());
+	
 	vector<string> fileobjnames;
-	vector<unsigned int> fileobjlocs;
 
 
 	// 3. send to agent instructions
 	AGCommand* agCmd = new AGCommand();
-	agCmd->buildType11(11, objnum, basesizeMB);
+	agCmd->buildType11(11, objnum, objSize, objLocs);
 	agCmd->setRkey("registerFile:"+filename);
 	agCmd->sendTo(clientIp);
 	delete agCmd;

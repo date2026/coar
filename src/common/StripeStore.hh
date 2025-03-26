@@ -12,8 +12,15 @@
 
 using namespace std;
 
+
+struct FileRecipe {
+	std::string filename;
+	int objNum;
+	std::vector<int> objLocs;
+	std::mutex fileRecipeMutex;
+};
 class StripeStore {
-  private:
+private:
     Config* _conf;
 
     // map original file name to SSEntry
@@ -32,12 +39,19 @@ class StripeStore {
     ofstream _poolStore;
     mutex _lockPoolStore;
     
-  public:
-    StripeStore(Config* conf);
+	std::unordered_map<std::string, FileRecipe*> _fileRecipes;
+	int _curNodeId;
+	std::mutex _fileRecipesMutex;
 
+public:
+    StripeStore(Config* conf);
+	~StripeStore();
     bool existEntry(string filename);
     void insertEntry(SSEntry* entry);
 
+	bool existFile(const std::string& filename);
+	std::vector<int> insertFile(const std::string& filename, int objNum);
+	FileRecipe* getFileRecipe(const std::string& filename);
 };
 
 #endif

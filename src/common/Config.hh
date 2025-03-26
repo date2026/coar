@@ -17,8 +17,8 @@ public:
     int _agent_num;
     std::vector<unsigned int> _agent_ips;
 
-    int _pktSize;
-    int _objSize;
+    int _pktSize;           // Byte
+    int _objSize;           // MB
     int _agWorkerThreadNum;
     int _coorThreadNum;
     int _distThreadNum;

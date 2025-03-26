@@ -35,6 +35,16 @@ static std::string ipInt2String(unsigned int ip) {
 }
 
 
+template<typename T>
+static std::string vec2String(std::vector<T> v) {
+    std::string ret;
+    for (auto& e : v) {
+        ret += std::to_string(e) + " ";
+    }
+    return ret;
+}
+
+
 
 #endif
 

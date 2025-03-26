@@ -18,22 +18,20 @@
 using namespace std;
 
 class Coordinator {
-  private:
+private:
     Config* _conf;
     redisContext* _localCtx;
     StripeStore* _stripeStore;
     UnderFS* _underfs;
     mutex _lockSelect;
 
-  public:
+public:
     Coordinator(Config* conf, StripeStore* ss);
     ~Coordinator();
 
     void doProcess();
 
     void registerFile(CoorCommand* coorCmd);
-    void registerOfflineEC(unsigned int clientIp, string filename, string ecpoolid, int filesizeMB);
-
 };
 
 #endif
