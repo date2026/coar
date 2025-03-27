@@ -19,7 +19,9 @@ hdfsFile HDFSHandler::openFile(const std::string& objname, HDFSMode mode) {
     hdfsFile file;
     switch (mode) {
         case HDFSMode::READ:
-            assert(false && "Not implemented");
+            file = hdfsOpenFile(_fs, objname.c_str(), O_RDONLY, 0, 0, 0);
+            assert(file != nullptr && "Failed to open file");
+            break;       
         case HDFSMode::WRITE:
             file = hdfsOpenFile(_fs, objname.c_str(), O_WRONLY | O_CREAT, 0, 0, 0);
             assert(file != nullptr && "Failed to open file");
@@ -37,7 +39,12 @@ void HDFSHandler::write2HDFS(hdfsFile file, char* buf, int bufSize) {
 }
 
 
-
+void HDFSHandler::readFromHDFS(hdfsFile file, char* buf, int bufSize) {
+    assert(_fs != nullptr && file != nullptr);
+    // int readSize = hdfsRead(_fs, file, buf, bufSize);
+    int readSize = hdfsPread(_fs, file, 0, buf, bufSize);
+    assert(readSize == bufSize && "Failed to read from file");
+}
 void HDFSHandler::closeFile(hdfsFile file) {
     assert(_fs != nullptr);
     int ret = hdfsCloseFile(_fs, file);

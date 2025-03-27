@@ -5,6 +5,7 @@
 #include "Config.hh"
 #include "FSObjOutputStream.hh"
 #include "ECDataPacket.hh"
+#include "FileMeta.hh"
 
 
 #include "../ec/ECTask.hh"
@@ -32,7 +33,7 @@ public:
     void doProcess();
     // deal with client request
     void clientWrite(AGCommand* agCmd);
-    void offlineWrite(string filename, string ecpoolid, int filesizeMB);
+    void clientRead(AGCommand* agCmd);
 	void receiveObjAndPersist(AGCommand* agCmd);
 
     // load data from redis
@@ -45,7 +46,7 @@ public:
 
     void send4PersistObjWorker(BlockingQueue<ECDataPacket*>* readQueue, 
                                 const std::string& objname, int pktNum, int objLoc);
-
+    void readObj(AGCommand* agCmd);
 };
 
 #endif

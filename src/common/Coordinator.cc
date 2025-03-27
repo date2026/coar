@@ -26,6 +26,7 @@ void Coordinator::doProcess() {
 		int type = coorCmd->getType();
 		switch (type) {
 			case 0: registerFile(coorCmd); break;
+            case 3: readFileMeta(coorCmd); break;
 			default: break;
 		}
 		delete coorCmd;
@@ -55,7 +56,7 @@ void Coordinator::registerFile(CoorCommand* coorCmd) {
 	LOG_INFO("check file: %s exist done", filename.c_str());
 
 	// 2. create file recipe, get ojblocs
-	std::vector<int> objLocs = _stripeStore->insertFile(filename, objnum);
+	std::vector<int> objLocs = _stripeStore->insertFile(filename, filesizeMB * 1024 * 1024, objnum);
 	LOG_INFO("register file: %s, objnum: %d, objSize: %d, objLocs: %s", filename.c_str(), objnum, objSize, vec2String(objLocs).c_str());
 	
 	vector<string> fileobjnames;
@@ -68,4 +69,33 @@ void Coordinator::registerFile(CoorCommand* coorCmd) {
 	agCmd->sendTo(clientIp);
 	delete agCmd;
 
+}
+
+/**
+ * read file meta
+ * called by agent
+ * return file meta
+ */
+void Coordinator::readFileMeta(CoorCommand* coorCmd) {
+    string filename = coorCmd->getFilename();
+    LOG_INFO("Coordinator::readFileMeta, filename: %s", filename.c_str());
+    
+    // 1. get file recipe
+    const FileMeta* fileMeta = _stripeStore->getFileMeta(filename);
+    std::vector<int> objLocs = fileMeta->getObjLocs();
+    int objnum = objLocs.size();
+    int filesizeMB = objnum * _conf->_objSize;
+    LOG_INFO("Coordinator::readFileMeta, send meta to agent, filename: %s, filesizeMB: %d, objnum: %d, objLocs: %s", 
+            filename.c_str(), filesizeMB, objnum, vec2String(objLocs).c_str());
+    // 2. return filemeta to agent
+    int fileMetaSize = sizeof(int) + sizeof(int) + objnum * sizeof(int);
+    char* buf = new char [fileMetaSize];
+    fileMeta->dumpFileMeto2Buf(buf);
+    const std::string retFileMetaKey = filename + "_meta";
+    redisContext* retFileMetaCtx = RedisUtil::createContext(coorCmd->getClientip());
+    redisReply* retFileMetaReply = (redisReply*)redisCommand(retFileMetaCtx, 
+                                "rpush %s %b", retFileMetaKey.c_str(), buf, fileMetaSize);
+    assert(retFileMetaReply != NULL && retFileMetaReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(retFileMetaReply);
+    redisFree(retFileMetaCtx);
 }

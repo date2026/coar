@@ -16,35 +16,43 @@ void StripeStore::insertEntry(SSEntry* entry) {
 }
 
 StripeStore::~StripeStore() {
-	_fileRecipesMutex.lock();
-	for (auto it = _fileRecipes.begin(); it != _fileRecipes.end(); it++) {
+	_fileMetasMutex.lock();
+	for (auto it = _fileMetas.begin(); it != _fileMetas.end(); it++) {
 		delete it->second;
 	}
-	_fileRecipesMutex.unlock();
+	_fileMetasMutex.unlock();
 }
 
 bool StripeStore::existFile(const std::string& filename) {
-	// LOG_INFO("StripeStore::existFile %s start", filename.c_str());
-	_fileRecipesMutex.lock();
-	// LOG_INFO("StripeStore::existFile get lock");
-	bool ret = _fileRecipes.find(filename) != _fileRecipes.end();
-	// LOG_INFO("StripeStore::existFile get ret: %d", ret);
-	_fileRecipesMutex.unlock();
-	// LOG_INFO("StripeStore::existFile %s done", filename.c_str());
+	_fileMetasMutex.lock();
+	bool ret = _fileMetas.find(filename) != _fileMetas.end();
+	_fileMetasMutex.unlock();
 	return ret;
 }
 
-std::vector<int> StripeStore::insertFile(const std::string& filename, int objNum) {
+/**
+ * fileSize in Byte
+ */
+std::vector<int> StripeStore::insertFile(const std::string& filename, int fileSize, int objNum) {
 	LOG_INFO("StripeStore::inserFile %s start", filename.c_str());
-	_fileRecipesMutex.lock();
-	FileRecipe* fileRecipe = new FileRecipe();
-	fileRecipe->filename = filename;
-	fileRecipe->objNum = objNum;
-	for (int i = 0; i < objNum; i++) {
-		fileRecipe->objLocs.push_back(_curNodeId);
+	_fileMetasMutex.lock();
+	std::vector<int> objLocs;
+    for (int i = 0; i < objNum; i++) {
+        objLocs.push_back(_curNodeId);
 		_curNodeId = (_curNodeId + 1) % _conf->_agent_num;
 	}
-	_fileRecipes[filename] = fileRecipe;
-	_fileRecipesMutex.unlock();
-	return fileRecipe->objLocs;
+    FileMeta* fileMeta = new FileMeta(filename, fileSize, objNum, objLocs);
+	
+	_fileMetas[filename] = fileMeta;
+	_fileMetasMutex.unlock();
+	return fileMeta->getObjLocs();
+}
+
+
+FileMeta* StripeStore::getFileMeta(const std::string& filename) {
+    _fileMetasMutex.lock();
+    assert(_fileMetas.find(filename) != _fileMetas.end());
+    FileMeta* fileMeta = _fileMetas[filename];
+    _fileMetasMutex.unlock();
+    return fileMeta;
 }

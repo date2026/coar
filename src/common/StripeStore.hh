@@ -4,7 +4,7 @@
 #include "BlockingQueue.hh"
 #include "Config.hh"
 #include "SSEntry.hh"
-
+#include "FileMeta.hh"
 #include "../inc/include.hh"
 #include "../protocol/CoorCommand.hh"
 
@@ -23,9 +23,6 @@ class StripeStore {
 private:
     Config* _conf;
 
-    // map original file name to SSEntry
-    // for online-encoded file, we can get objname for each split
-    // for offline encoded file, we can get splited blocks
     unordered_map<string, SSEntry*> _ssEntryMap;  
     mutex _lockSSEntryMap;
     
@@ -39,9 +36,9 @@ private:
     ofstream _poolStore;
     mutex _lockPoolStore;
     
-	std::unordered_map<std::string, FileRecipe*> _fileRecipes;
+	std::unordered_map<std::string, FileMeta*> _fileMetas;
 	int _curNodeId;
-	std::mutex _fileRecipesMutex;
+	std::mutex _fileMetasMutex;
 
 public:
     StripeStore(Config* conf);
@@ -50,8 +47,8 @@ public:
     void insertEntry(SSEntry* entry);
 
 	bool existFile(const std::string& filename);
-	std::vector<int> insertFile(const std::string& filename, int objNum);
-	FileRecipe* getFileRecipe(const std::string& filename);
+	std::vector<int> insertFile(const std::string& filename, int fileSize, int objNum);
+	FileMeta* getFileMeta(const std::string& filename);
 };
 
 #endif

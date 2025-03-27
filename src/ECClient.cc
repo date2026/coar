@@ -1,5 +1,6 @@
 #include "common/Config.hh"
 #include "common/ECOutputStream.hh"
+#include "common/ECInputStream.hh"
 void usage() {
     std::cout << "usage: ./OECClient write filepath saveas ecid size(MB)" << std::endl;
     std::cout << "       ./OECClient read filename saveas" << std::endl;
@@ -11,6 +12,7 @@ const std::string confPath = "/home/openec/lmq_openec/conf/1.json";
 
 
 void write(const std::string& file_path, const std::string& saveas, const std::string& ecidpool, int size);
+void read(const std::string& file_name, const std::string& saveas);
 
 int main(int argc, char** argv) {
     assert(argc >= 2);
@@ -28,6 +30,7 @@ int main(int argc, char** argv) {
         std::string file_name(argv[2]);
         std::string saveas(argv[3]);
         LOG_INFO("read, file_name: %s, save_as: %s", file_name.c_str(), saveas.c_str());
+        read(file_name, saveas);
     } else if (req_type == "encode") {
         assert(argc == 2);
     } else if (req_type == "repair") {
@@ -77,4 +80,19 @@ void write(const std::string& filePath, const std::string& saveAs, const std::st
     gettimeofday(&writeEnd, NULL);
     LOG_INFO("write time: %f ms", RedisUtil::duration(writeStart, writeEnd));
 
+}
+
+void read(const std::string& filePath, const std::string& saveas) {
+    Config* conf = new Config(confPath);
+    struct timeval readStart, readEnd;
+    gettimeofday(&readStart, NULL);
+
+    ECInputStream* instream = new ECInputStream(conf, filePath);
+    instream->output2File(saveas);
+
+    gettimeofday(&readEnd, NULL);
+    cout << "read.overall.duration: " << RedisUtil::duration(readStart, readEnd)<< endl;
+  
+    delete instream;
+    delete conf;
 }

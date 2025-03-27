@@ -32,6 +32,7 @@ public:
     void doProcess();
 
     void registerFile(CoorCommand* coorCmd);
+    void readFileMeta(CoorCommand* coorCmd);
 };
 
 #endif

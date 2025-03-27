@@ -31,6 +31,7 @@ AGCommand::AGCommand(char* reqStr) {
     case 10: resolveType10(); break;
     case 11: resolveType11(); break;
     case 12: resolveType12(); break;
+    case 13: resolveType13(); break;
     default: break;
   }
   _agCmd = nullptr;
@@ -528,6 +529,23 @@ void AGCommand::buildType12(int type, const std::string& objname) {
 
 void AGCommand::resolveType12() {
 	_filename = readString();
+}
+
+void AGCommand::buildType13(int type, unsigned int sendIp, const std::string& objname, int objIdx) {
+    _type = type;
+    _sendIp = sendIp;
+	_filename = objname;
+    _objIdx = objIdx;
+    writeInt(_type);
+    writeInt(_sendIp);
+	writeString(_filename);
+    writeInt(_objIdx);
+}
+
+void AGCommand::resolveType13() {
+    _sendIp = readInt();
+	_filename = readString();
+    _objIdx = readInt();
 }
 
 void AGCommand::dump() {

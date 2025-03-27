@@ -80,6 +80,9 @@ class AGCommand {
     int _objnum;
     int _basesizeMB;
     std::vector<int> _objLocs;
+
+    // type 13 read obj
+    int _objIdx;
   public:
     AGCommand();
     ~AGCommand();
@@ -117,6 +120,8 @@ class AGCommand {
     int getObjnum();
     int getBasesizeMB();
 	std::vector<int> getObjLocs() const { return _objLocs; };
+    int getObjIdx() { return _objIdx; }
+   
     // send method
     void setRkey(string key);
     void sendTo(unsigned int ip);
@@ -180,6 +185,7 @@ class AGCommand {
 					 std::vector<int> objLocs);
 
 	void buildType12(int type, const std::string& objname);
+    void buildType13(int type, unsigned int ip, const std::string& objname, int objIdx);
     // resolve AGCommand
     void resolveType0();
     void resolveType1();
@@ -190,6 +196,7 @@ class AGCommand {
     void resolveType10();
     void resolveType11();
 	void resolveType12();
+    void resolveType13();
 
     // for debug
     void dump();

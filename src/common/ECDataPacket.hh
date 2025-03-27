@@ -17,7 +17,7 @@ class ECDataPacket {
     ECDataPacket(int len);
     ~ECDataPacket();
     void setRaw(char* raw);
-
+    void setData(char* src);
     int getDatalen();
     char* getData();
     char* getRaw();

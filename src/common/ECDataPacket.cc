@@ -36,6 +36,10 @@ void ECDataPacket::setRaw(char* raw) {
   _data = _raw+4;
 }
 
+void ECDataPacket::setData(char* src) {
+    memcpy(_data, src, _dataLen);
+}
+
 int ECDataPacket::getDatalen() {
   return _dataLen;
 }

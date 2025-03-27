@@ -34,7 +34,9 @@ void ECWorker::doProcess() {
 		int type = agCmd->getType();
 		switch (type) {
 			case 0: clientWrite(agCmd); break;
+            case 1: clientRead(agCmd); break;
 			case 12: receiveObjAndPersist(agCmd); break;
+            case 13: readObj(agCmd); break;
 			default:break;
 		}
 
@@ -219,4 +221,89 @@ void ECWorker::receiveObjAndPersist(AGCommand* agCmd) {
 	// write2HDFS((hdfsFS)_underfs, objname, buf, bufSize);
 	delete[] buf;
 	LOG_INFO("receiveObjAndPersist done, objname: %s", objname.c_str());
+}
+
+
+
+/**
+ * local client readfile
+ * get file info from coordinator
+ * return file size to client
+ * send read request to agents
+ */
+void ECWorker::clientRead(AGCommand* agCmd) {
+    const std::string filename = agCmd->getFilename();
+    LOG_INFO("clientRead start, filename: %s", filename.c_str());
+
+    // 1. get file meta from coordinator
+    CoorCommand* coorCmd = new CoorCommand();
+    coorCmd->buildType3(3, _conf->_localIp, filename);
+    coorCmd->sendTo(_coorCtx);
+    delete coorCmd;
+    LOG_INFO("clientRead send file meta request to coordinator, filename: %s", filename.c_str());
+
+    const std::string fileMetaKey = filename + "_meta";
+    redisReply* rReply;
+    rReply = (redisReply*)redisCommand(_localCtx, "blpop %s 0", fileMetaKey.c_str());
+    assert(rReply != NULL && rReply->type == REDIS_REPLY_ARRAY && rReply->elements == 2);
+    char* metaStr = rReply->element[1]->str;
+    const FileMeta* fileMeta = new FileMeta(metaStr);
+    freeReplyObject(rReply);
+
+    LOG_INFO("clientRead get file meta, filename: %s, fileSize: %d, objNum: %d, objLocs: %s", 
+            filename.c_str(), fileMeta->getFileSize(), fileMeta->getObjNum(), vec2String(fileMeta->getObjLocs()).c_str());
+
+
+    // 2. return file size to client
+    const std::string retFileSizeKey = filename + "_filesize";
+    int fileSize = fileMeta->getFileSize();
+    int tmpFileSize = htonl(fileSize);
+    redisReply* sizeReply = (redisReply*)redisCommand(_localCtx, "rpush %s %b", retFileSizeKey.c_str(), (char*)&tmpFileSize, sizeof(int));
+    assert(sizeReply != NULL && sizeReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(sizeReply);
+    
+    LOG_INFO("clientRead return file size to client, filename: %s, fileSize: %d", filename.c_str(), fileSize);
+    
+    // 3. send read obj request to agents
+    int objNum = fileMeta->getObjNum();
+    std::vector<int> objLocs = fileMeta->getObjLocs();
+    for (int i = 0; i < objNum; i++) {
+        AGCommand* agCmd = new AGCommand();
+        agCmd->buildType13(13, _conf->_localIp, filename, i);
+        agCmd->sendTo(_conf->_agent_ips[objLocs[i]]);
+        delete agCmd;
+        LOG_INFO("clientRead send read obj request to agent, filename: %s, objIdx: %d, objLoc: %d", filename.c_str(), i, objLocs[i]);
+    }
+
+
+    delete fileMeta;
+}
+
+
+void ECWorker::readObj(AGCommand* agCmd) {
+    const std::string filename = agCmd->getFilename();
+    const int objIdx = agCmd->getObjIdx();
+    unsigned int sendIp = agCmd->getSendIp();
+    LOG_INFO("readObj start, send ip: %s, filename: %s, objIdx: %d", 
+            RedisUtil::ip2Str(sendIp).c_str(), filename.c_str(), objIdx);
+
+
+    // 1. read obj from hdfs
+    const std::string objname = filename + "_lmqobj_" + std::to_string(objIdx);
+    hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
+    int bufSize = _conf->_objSize * 1024 * 1024;
+    char* buf = new char [bufSize];
+    _hdfsHandler->readFromHDFS(file, buf, bufSize);
+    _hdfsHandler->closeFile(file);
+
+    // 2. send obj to agent
+    const std::string readObjKey = objname + "_read";
+    redisContext* readObjCtx = RedisUtil::createContext(sendIp);
+    redisReply* rReply = (redisReply*)redisCommand(readObjCtx, "rpush %s %b", 
+                        readObjKey.c_str(), buf, bufSize);
+    assert(rReply != NULL && rReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(rReply);
+    redisFree(readObjCtx);
+    LOG_INFO("readObj done, send ip: %s, filename: %s, objIdx: %d, size: %d", 
+            RedisUtil::ip2Str(sendIp).c_str(), filename.c_str(), objIdx, bufSize);
 }
