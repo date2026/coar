@@ -83,6 +83,13 @@ class AGCommand {
 
     // type 13 read obj
     int _objIdx;
+
+    // type 14 encode
+    std::string _ecdagPath;
+
+    // type 16 ectask
+    int _ecTaskNum;
+
   public:
     AGCommand();
     ~AGCommand();
@@ -121,7 +128,8 @@ class AGCommand {
     int getBasesizeMB();
 	std::vector<int> getObjLocs() const { return _objLocs; };
     int getObjIdx() { return _objIdx; }
-   
+    std::string getEcdagPath() const { return _ecdagPath; };
+    int getEcTaskNum() const { return _ecTaskNum; }
     // send method
     void setRkey(string key);
     void sendTo(unsigned int ip);
@@ -186,6 +194,15 @@ class AGCommand {
 
 	void buildType12(int type, const std::string& objname);
     void buildType13(int type, unsigned int ip, const std::string& objname, int objIdx);
+    
+    // for encode 
+    void buildType14(int type, const std::string& filename, const std::string& ecdagPath);
+
+    // for decode
+    void buildType15(int type, const std::string& filename, const std::string& ecdagPath);
+
+    // for send ectasks
+    void buildType16(int type, const std::string& filename, int taskNum);
     // resolve AGCommand
     void resolveType0();
     void resolveType1();
@@ -197,6 +214,9 @@ class AGCommand {
     void resolveType11();
 	void resolveType12();
     void resolveType13();
+    void resolveType14();
+    void resolveType15();
+    void resolveType16();
 
     // for debug
     void dump();

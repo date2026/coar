@@ -37,6 +37,9 @@ void ECWorker::doProcess() {
             case 1: clientRead(agCmd); break;
 			case 12: receiveObjAndPersist(agCmd); break;
             case 13: readObj(agCmd); break;
+            case 14: clientEncode(agCmd); break;
+            case 15: clientDecode(agCmd); break;
+            case 16: execECTasks(agCmd); break;
 			default:break;
 		}
 
@@ -279,7 +282,11 @@ void ECWorker::clientRead(AGCommand* agCmd) {
     delete fileMeta;
 }
 
-
+/**
+ * source agent receive clientRead request, call this agent to readObj
+ * read obj from hdfs
+ * return to source agent
+ */
 void ECWorker::readObj(AGCommand* agCmd) {
     const std::string filename = agCmd->getFilename();
     const int objIdx = agCmd->getObjIdx();
@@ -306,4 +313,259 @@ void ECWorker::readObj(AGCommand* agCmd) {
     redisFree(readObjCtx);
     LOG_INFO("readObj done, send ip: %s, filename: %s, objIdx: %d, size: %d", 
             RedisUtil::ip2Str(sendIp).c_str(), filename.c_str(), objIdx, bufSize);
+}
+
+/**
+ * receive encode request from client
+ * send encode request to coordinator
+ * wait for encode done
+ */
+void ECWorker::clientEncode(AGCommand* agCmd) {
+    const std::string filename = agCmd->getFilename();
+    const std::string ecdagPath = agCmd->getEcdagPath();
+    LOG_INFO("clientEncode start, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+
+    // 1. send encode request to coordinator
+    CoorCommand* coorCmd = new CoorCommand();
+    coorCmd->buildType13(13, filename, _conf->_localIp, ecdagPath);
+    coorCmd->sendTo(_coorCtx);
+    delete coorCmd;
+    LOG_INFO("clientEncode send encode request to coordinator, wait for encode done, filename: %s", filename.c_str());
+
+    // 2. wait for encode done
+    const std::string waitEncodeDoneKey = filename + "_coordinator_encode_done";
+    LOG_INFO("ECWorker::clientEncode wait for encode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+    redisReply* waitEncodeDoneReply = (redisReply*)redisCommand(_localCtx, "blpop %s 0", waitEncodeDoneKey.c_str());
+    assert(waitEncodeDoneReply != NULL && waitEncodeDoneReply->type == REDIS_REPLY_ARRAY 
+            && waitEncodeDoneReply->elements == 2);
+    freeReplyObject(waitEncodeDoneReply);
+    LOG_INFO("ECWorker::clientEncode receive coordinator encode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+
+    // 3. send encode done to client
+    const std::string encodeDoneKey = filename + "_agent_encode_done";
+    redisReply* agentEncodeDoneReply = (redisReply*)redisCommand(_localCtx, "rpush %s 1", encodeDoneKey.c_str());
+    assert(agentEncodeDoneReply != NULL && agentEncodeDoneReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(agentEncodeDoneReply);
+    LOG_INFO("ECWorker::clientEncode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+}
+
+
+
+/**
+ * receive decode request from client
+ * send decode request to coordinator
+ * wait for decode done
+ */
+void ECWorker::clientDecode(AGCommand* agCmd) {
+    const std::string filename = agCmd->getFilename();
+    const std::string ecdagPath = agCmd->getEcdagPath();
+    LOG_INFO("clientDecode start, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+
+    // 1. send decode request to coordinator
+    CoorCommand* coorCmd = new CoorCommand();
+    coorCmd->buildType14(14, filename, _conf->_localIp, ecdagPath);
+    coorCmd->sendTo(_coorCtx);
+    delete coorCmd;
+    LOG_INFO("clientDecode send decode request to coordinator, wait for decode done, filename: %s", filename.c_str());
+
+    // 2. wait for decode done
+    const std::string waitDecodeDoneKey = filename + "_coordinator_decode_done";
+    LOG_INFO("ECWorker::clientDecode wait for decode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+    redisReply* waitDecodeDoneReply = (redisReply*)redisCommand(_localCtx, "blpop %s 0", waitDecodeDoneKey.c_str());
+    assert(waitDecodeDoneReply != NULL && waitDecodeDoneReply->type == REDIS_REPLY_ARRAY 
+            && waitDecodeDoneReply->elements == 2);
+    freeReplyObject(waitDecodeDoneReply);
+    LOG_INFO("ECWorker::clientDecode receive coordinator decode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+
+    // 3. send decode done to client
+    const std::string decodeDoneKey = filename + "_agent_decode_done";
+    redisReply* agentDecodeDoneReply = (redisReply*)redisCommand(_localCtx, "rpush 1", decodeDoneKey.c_str());
+    assert(agentDecodeDoneReply != NULL && agentDecodeDoneReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(agentDecodeDoneReply);
+    LOG_INFO("ECWorker::clientDecode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+}
+
+/**
+ * receive ec tasks from coordinator
+ */
+void ECWorker::execECTasks(AGCommand* agCmd) {
+    const std::string filename = agCmd->getFilename();
+    int taskNum = agCmd->getEcTaskNum();
+    LOG_INFO("execECTasks start, filename: %s, taskNum: %d", filename.c_str(), taskNum);
+
+    // store obj and tmpobj, objname->obj
+    ObjBuffer* objBuffer = new ObjBuffer();
+
+    // 1. get tasks from coordinator
+    const std::string receiveEcTasksKey = filename + "_ecTasks";
+    std::vector<ECTask*> tasks;
+
+    redisReply* receiveEcTasksReply;
+    
+
+    for (int i = 0; i < taskNum; i++) {
+        receiveEcTasksReply = (redisReply*)redisCommand(_localCtx, "blpop %s 0", receiveEcTasksKey.c_str());
+        assert(receiveEcTasksReply != NULL && receiveEcTasksReply->type == REDIS_REPLY_ARRAY 
+                && receiveEcTasksReply->elements == 2);
+        char* taskStr = receiveEcTasksReply->element[1]->str;
+        ECTask* task = new ECTask();
+        task->parse(taskStr);
+        LOG_INFO("ECWorker receive task, type: %d, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d, objIds: %s, encodePatternId: %d, coefs: %s", 
+                ECTaskType2int(task->_type), task->_nodeId, task->_srcNodeId, task->_dstNodeId, task->_objId, task->_tmpObjId, 
+                vec2String(task->_objIds).c_str(), task->_encodePatternId, vec2String(task->_coefs).c_str());
+        tasks.push_back(task);
+        freeReplyObject(receiveEcTasksReply);
+    }
+
+    // 2. exec tasks
+    // TODO: parallelize tasks
+    LOG_INFO("ECWorker exec tasks, filename: %s, taskNum: %d", filename.c_str(), taskNum);
+    for (const auto task : tasks) {
+        switch (task->_type) {
+            case ECTaskType::SEND:
+                execSendECTask(filename, task, objBuffer);
+                break;
+            case ECTaskType::RECEIVE:
+                execReceiveECTask(filename, task, objBuffer);
+                break;
+            case ECTaskType::ENCODE:
+                execEncodeECTask(filename, task, objBuffer);
+                break;
+            case ECTaskType::PERSIST:
+                execPersistECTask(filename, task, objBuffer);
+                break;
+            default:
+                assert(false && "undefined ECTaskType");
+        }
+    }    
+    LOG_INFO("ECWorker exec tasks done, filename: %s, taskNum: %d", filename.c_str(), taskNum);
+
+    // 3. send encode done to coordinator
+    const std::string execEcTasksDoneKey = filename + "_ecTasks_done";
+    redisReply* execEcTasksDoneReply = (redisReply*)redisCommand(_coorCtx, "rpush %s %b", 
+            execEcTasksDoneKey.c_str(), (char*)&taskNum, sizeof(int));
+    assert(execEcTasksDoneReply != NULL && execEcTasksDoneReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(execEcTasksDoneReply);
+    LOG_INFO("ECWorker send encode done to coordinator, filename: %s, taskNum: %d", filename.c_str(), taskNum);
+
+
+    // 4. free tasks
+    for (auto task : tasks) {
+        delete task;
+    }
+
+    delete objBuffer;
+}
+
+
+void ECWorker::execSendECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
+    const int nodeId = task->_nodeId;
+    const int srcNodeId = task->_srcNodeId;
+    const int dstNodeId = task->_dstNodeId;
+    const int objId = task->_objId;
+
+    LOG_INFO("execSendECTask start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
+            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
+    
+    // 1. read obj from hdfs
+    int bufSizeByte = _conf->_objSize * 1024 * 1024;
+    char* buf;                              // get from objBuffer or new, free by objBuffer
+    if (objBuffer->existObj(objId)) {
+        buf = objBuffer->getObj(objId);
+    } else {
+        buf = new char [bufSizeByte];
+        const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+        hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
+        _hdfsHandler->readFromHDFS(file, buf, bufSizeByte);
+        _hdfsHandler->closeFile(file);
+        objBuffer->insertObj(objId, buf);
+    }
+
+
+    const std::string sendObjKey = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
+                                      std::to_string(dstNodeId) + "_" + std::to_string(objId);
+    redisContext* sendObjCtx = RedisUtil::createContext(_conf->_agent_ips[dstNodeId]);
+    assert(sendObjCtx != NULL && "Failed to create redis context");
+    redisReply* sendObjReply = (redisReply*)redisCommand(sendObjCtx, "rpush %s %b", 
+                                   sendObjKey.c_str(), buf, bufSizeByte);
+    assert(sendObjReply != NULL && sendObjReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(sendObjReply);
+    redisFree(sendObjCtx);
+    LOG_INFO("execSendECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
+            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
+}
+
+void ECWorker::execReceiveECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
+    const int nodeId = task->_nodeId;
+    const int dstNodeId = task->_dstNodeId;
+    const int srcNodeId = task->_srcNodeId;
+    const int objId = task->_objId;
+    const int tmpObjId = task->_tmpObjId;
+
+    LOG_INFO("execReceiveECTask start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d", 
+            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId);
+    const std::string receiveObjKey = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
+                                    std::to_string(dstNodeId) + "_" + std::to_string(objId);
+    redisReply* receiveObjRely = (redisReply*)redisCommand(_localCtx, "blpop %s 0", receiveObjKey.c_str());
+    assert(receiveObjRely != NULL && receiveObjRely->type == REDIS_REPLY_ARRAY 
+            && receiveObjRely->elements == 2);
+    char* taskStr = receiveObjRely->element[1]->str;
+    int objSizeByte = _conf->_objSize * 1024 * 1024;
+    char* obj = new char[objSizeByte];      // insert into objBuffer, free by objBuffer
+    memcpy(obj, taskStr, objSizeByte);
+    objBuffer->insertObj(tmpObjId, obj);
+    freeReplyObject(receiveObjRely);
+    LOG_INFO("execReceiveECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d", 
+             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId);
+}
+
+void ECWorker::execEncodeECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
+    const int nodeId = task->_nodeId;
+    const std::vector<int> objIds = task->_objIds;
+    const int tmpObjId = task->_tmpObjId;
+    const std::vector<int> coefs = task->_coefs;
+    int objSizeByte = _conf->_objSize * 1024 * 1024;
+
+    LOG_INFO("execEncodeECTask start, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, encodePatternId: %d, coefs: %s",
+             filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, 
+             task->_encodePatternId, vec2String(coefs).c_str()); 
+    
+    std::vector<const char*> objBufs;                   // get obj from objBuffer, free by objBuffer
+    for (int objId : objIds) {
+        if (!objBuffer->existObj(objId)) {
+            LOG_ERROR("execEncodeECTask, objId: %d not exist", objId);
+            assert(false && "obj not exist");
+        } 
+        const char* objBuf = objBuffer->getObj(objId);  // get obj from objBuffer, free by objBuffer
+        objBufs.push_back(objBuf);
+    }
+    char* encodeBuf = new char[objSizeByte];            // will insert into objBuffer, free by objBuffer
+    memset(encodeBuf, 0, objSizeByte);
+    // TODO: check parameters for encode, especially coefs(matrix)
+    RSPlan::encode(objBufs, encodeBuf, coefs, _conf->_rsParam.w, objSizeByte);
+    objBuffer->insertObj(tmpObjId, encodeBuf);
+    LOG_INFO("execEncodeECTask done, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, encodePatternId: %d, coefs: %s",
+             filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, 
+             task->_encodePatternId, vec2String(coefs).c_str()); 
+
+}
+
+void ECWorker::execPersistECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
+    const int nodeId = task->_nodeId;
+    const int objId = task->_objId;
+    const int tmpObjId = task->_tmpObjId;
+
+    LOG_INFO("execSendECTask start, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
+    if (!objBuffer->existObj(tmpObjId)) {
+        LOG_ERROR("execPersistECTask, tmpObjId: %d not exist", tmpObjId);
+        assert(false && "tmpObj not exist");
+    }
+    char* objBuf = objBuffer->getObj(tmpObjId);         // free by objBuffer
+    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    int objSizeByte = _conf->_objSize * 1024 * 1024;
+
+    hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::WRITE);
+    _hdfsHandler->write2HDFS(file, objBuf, objSizeByte);
+    _hdfsHandler->closeFile(file);
+    
 }

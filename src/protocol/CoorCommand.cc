@@ -34,6 +34,7 @@ CoorCommand::CoorCommand(char* reqStr) {
     case 9: resolveType9(); break;
     case 11: resolveType11(); break;
     case 12: resolveType12(); break;
+    case 13: resolveType13(); break;
     default: break;
   }
   _coorCmd = nullptr;
@@ -329,6 +330,45 @@ void CoorCommand::resolveType12() {
   _clientIp = readInt();
   _benchname = readString();
 }
+
+void CoorCommand::buildType13(int type, const string& filename, 
+                              unsigned int sendIp, const std::string& ecdagPath) {
+	_type = type;
+	_clientIp = sendIp;
+	_filename = filename;
+    _ecdagPath = ecdagPath;
+
+	writeInt(_type);
+	writeInt(_clientIp);
+	writeString(_filename);
+    writeString(_ecdagPath);
+}
+
+void CoorCommand::resolveType13() {
+	_clientIp = readInt();
+	_filename = readString();
+    _ecdagPath = readString();
+}
+
+void CoorCommand::buildType14(int type, const string& filename, 
+    unsigned int sendIp, const std::string& ecdagPath) {
+    _type = type;
+    _clientIp = sendIp;
+    _filename = filename;
+    _ecdagPath = ecdagPath;
+
+    writeInt(_type);
+    writeInt(_clientIp);
+    writeString(_filename);
+    writeString(_ecdagPath);
+}
+
+void CoorCommand::resolveType14() {
+    _clientIp = readInt();
+    _filename = readString();
+    _ecdagPath = readString();
+}
+
 
 void CoorCommand::dump() {
   cout << "CoorCommand::type: " << _type;

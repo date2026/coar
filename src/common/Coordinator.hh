@@ -15,6 +15,8 @@
 #include "../protocol/AGCommand.hh"
 #include "../protocol/CoorCommand.hh"
 #include "logger.hh"
+#include "../ec/ECPlan.hh"
+#include "../ec/RSPlan.hh"
 using namespace std;
 
 class Coordinator {
@@ -33,6 +35,11 @@ public:
 
     void registerFile(CoorCommand* coorCmd);
     void readFileMeta(CoorCommand* coorCmd);
+    void encode(CoorCommand* coorCmd);
+    void decode(CoorCommand* coorCmd);
+    void encodeRS(const std::string& filename, FileMeta* fileMeta, const std::string& ecdagPath);
+    void decodeRS(const std::string& filename, FileMeta* fileMeta, const std::string& ecdagPath);
+
 };
 
 #endif

@@ -3,6 +3,16 @@
 #include "../inc/include.hh"
 #include "../ec/ECPolicy.hh"
 
+
+
+enum class ECType {
+    RS, LRC, MSR
+};
+struct RSParam {
+    int n;
+    int k;
+    int w;
+};
 class Config {
 public:
     Config(const std::string& file_path);
@@ -26,6 +36,9 @@ public:
     std::unordered_map<std::string, ECPolicy*> _ecPolicyMap;    // ecid->ECPolicy
 
     std::vector<std::string> _fsParam;
+
+    ECType _ecType;
+    RSParam _rsParam;
 
     std::unordered_map<std::string, std::string> _offlineECMap = {{"rs_9_6_pool", "rs_9_6"}};
     std::unordered_map<std::string, int> _offlineECBase = {{"rs_9_6_pool", 1}};

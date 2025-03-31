@@ -4,7 +4,7 @@
 void usage() {
     std::cout << "usage: ./OECClient write filepath saveas ecid size(MB)" << std::endl;
     std::cout << "       ./OECClient read filename saveas" << std::endl;
-    std::cout << "       ./OECClient encode" << std::endl;
+    std::cout << "       ./OECClient encode filename" << std::endl;
     std::cout << "       ./OECClient repair" << std::endl;
 }
 
@@ -13,6 +13,8 @@ const std::string confPath = "/home/openec/lmq_openec/conf/1.json";
 
 void write(const std::string& file_path, const std::string& saveas, const std::string& ecidpool, int size);
 void read(const std::string& file_name, const std::string& saveas);
+void encode(const std::string& filename, const std::string& ecdagPath);
+void decode(const std::string& filename, const std::string& ecdagPath);
 
 int main(int argc, char** argv) {
     assert(argc >= 2);
@@ -32,7 +34,15 @@ int main(int argc, char** argv) {
         LOG_INFO("read, file_name: %s, save_as: %s", file_name.c_str(), saveas.c_str());
         read(file_name, saveas);
     } else if (req_type == "encode") {
-        assert(argc == 2);
+        assert(argc == 4);
+        const std::string filename(argv[2]);
+        const std::string ecdagPath(argv[3]);
+        encode(filename, ecdagPath);
+    } else if (req_type == "decode") {
+        assert(argc == 4);
+        const std::string filename(argv[2]);
+        const std::string ecdagPath(argv[3]);
+        decode(filename, ecdagPath);
     } else if (req_type == "repair") {
         assert(argc == 2);
     } else {
@@ -94,5 +104,71 @@ void read(const std::string& filePath, const std::string& saveas) {
     cout << "read.overall.duration: " << RedisUtil::duration(readStart, readEnd)<< endl;
   
     delete instream;
+    delete conf;
+}
+
+
+void encode(const std::string& filename, const std::string& ecdagPath) {
+    LOG_INFO("encode, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+    Config* conf = new Config(confPath);
+
+    struct timeval encodeStart, encodeEnd;
+    gettimeofday(&encodeStart, NULL);
+    
+    // 1. send encode request to agent
+    AGCommand* agCmd = new AGCommand();
+    agCmd->buildType14(14, filename, ecdagPath);
+    agCmd->sendTo(conf->_localIp);
+    delete agCmd;
+
+    // 2. wait for encode done
+    const std::string waitEncodeDoneKey = filename + "_agent_encode_done";
+    redisContext* waitEncodeDoneCtx = RedisUtil::createContext(conf->_localIp);
+    assert(waitEncodeDoneCtx != NULL && "Failed to create redis context");
+    LOG_INFO("ECClient wait for encode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+
+    redisReply* waitEncodeDoneReply = (redisReply*)redisCommand(waitEncodeDoneCtx, "blpop %s 0", waitEncodeDoneKey.c_str());
+    assert(waitEncodeDoneReply != NULL && waitEncodeDoneReply->type == REDIS_REPLY_ARRAY 
+            && waitEncodeDoneReply->elements == 2);
+    freeReplyObject(waitEncodeDoneReply);
+    redisFree(waitEncodeDoneCtx);
+    LOG_INFO("ECClient receive agent encode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+
+    // 3. clean
+    gettimeofday(&encodeEnd, NULL);
+    cout << "encode.overall.duration: " << RedisUtil::duration(encodeStart, encodeEnd) << endl;
+    delete conf;
+}
+
+
+void decode(const std::string& filename, const std::string& ecdagPath) {
+    LOG_INFO("encode, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+    Config* conf = new Config(confPath);
+
+    struct timeval decodeStart, decodeEnd;
+    gettimeofday(&decodeStart, NULL);
+    
+    // 1. send decode request to agent
+    AGCommand* agCmd = new AGCommand();
+    agCmd->buildType15(14, filename, ecdagPath);
+    agCmd->sendTo(conf->_localIp);
+    delete agCmd;
+
+    // 2. wait for decode done
+    const std::string waitDecodeDoneKey = filename + "_agent_decode_done";
+    redisContext* waitDecodeDoneCtx = RedisUtil::createContext(conf->_localIp);
+    assert(waitDecodeDoneCtx != NULL && "Failed to create redis context");
+    LOG_INFO("ECClient wait for decode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+
+    redisReply* waitDecodeDoneReply = (redisReply*)redisCommand(waitDecodeDoneCtx, "blpop %s 0", waitDecodeDoneKey.c_str());
+    assert(waitDecodeDoneReply != NULL && waitDecodeDoneReply->type == REDIS_REPLY_ARRAY 
+            && waitDecodeDoneReply->elements == 2);
+    freeReplyObject(waitDecodeDoneReply);
+    redisFree(waitDecodeDoneCtx);
+    LOG_INFO("ECClient receive agent decode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+
+    // 3. clean
+    gettimeofday(&decodeEnd, NULL);
+    cout << "decode.overall.duration: " << RedisUtil::duration(decodeStart, decodeEnd) << endl;
     delete conf;
 }

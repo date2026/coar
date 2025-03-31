@@ -48,11 +48,16 @@ std::vector<int> StripeStore::insertFile(const std::string& filename, int fileSi
 	return fileMeta->getObjLocs();
 }
 
-
+/**
+ * get file meta
+ * lock file meta
+ * free by coordinator after done
+ */
 FileMeta* StripeStore::getFileMeta(const std::string& filename) {
     _fileMetasMutex.lock();
     assert(_fileMetas.find(filename) != _fileMetas.end());
     FileMeta* fileMeta = _fileMetas[filename];
+    fileMeta->lock();
     _fileMetasMutex.unlock();
     return fileMeta;
 }

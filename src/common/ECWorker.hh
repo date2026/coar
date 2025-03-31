@@ -8,7 +8,6 @@
 #include "FileMeta.hh"
 
 
-#include "../ec/ECTask.hh"
 #include "../fs/UnderFS.hh"
 #include "../fs/FSUtil.hh"
 #include "../fs/HDFSHandler.hh"
@@ -16,6 +15,9 @@
 #include "../protocol/AGCommand.hh"
 #include "../protocol/CoorCommand.hh"
 #include "../util/RedisUtil.hh"
+#include "../ec/ECPlan.hh"
+#include "../ec/RSPlan.hh"
+#include "ObjBuffer.hh"
 using namespace std;
 class ECWorker {
 private: 
@@ -34,19 +36,28 @@ public:
     // deal with client request
     void clientWrite(AGCommand* agCmd);
     void clientRead(AGCommand* agCmd);
+    void clientEncode(AGCommand* agCmd);
+    void clientDecode(AGCommand* agCmd);
 	void receiveObjAndPersist(AGCommand* agCmd);
+    void execECTasks(AGCommand* agCmd);
 
-    // load data from redis
+    // load data from redis, called by clientWrite
     void loadWorker(BlockingQueue<ECDataPacket*>* readQueue,
                     string keybase,
                     int startid,
                     int step,
                     int round,
                     bool zeropadding);
-
+    // send obj to agents to persist, called by clientWrite to persist objs to agents
     void send4PersistObjWorker(BlockingQueue<ECDataPacket*>* readQueue, 
                                 const std::string& objname, int pktNum, int objLoc);
     void readObj(AGCommand* agCmd);
+
+    // exec ec task, called by execECTasks
+    void execSendECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    void execReceiveECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    void execEncodeECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    void execPersistECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
 };
 
 #endif

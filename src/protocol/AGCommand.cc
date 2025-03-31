@@ -32,6 +32,9 @@ AGCommand::AGCommand(char* reqStr) {
     case 11: resolveType11(); break;
     case 12: resolveType12(); break;
     case 13: resolveType13(); break;
+    case 14: resolveType14(); break;
+    case 15: resolveType15(); break;
+    case 16: resolveType16(); break;
     default: break;
   }
   _agCmd = nullptr;
@@ -547,6 +550,52 @@ void AGCommand::resolveType13() {
 	_filename = readString();
     _objIdx = readInt();
 }
+
+// for encode
+void AGCommand::buildType14(int type, const std::string& filename, const std::string& ecdagPath) {
+    _type = type;
+	_filename = filename;
+    _ecdagPath = ecdagPath;
+    writeInt(_type);
+	writeString(_filename);
+    writeString(_ecdagPath);
+}
+
+void AGCommand::resolveType14() {
+	_filename = readString();
+    _ecdagPath = readString();
+}
+
+// for decode
+void AGCommand::buildType15(int type, const std::string& filename, const std::string& ecdagPath) {
+    _type = type;
+	_filename = filename;
+    _ecdagPath = ecdagPath;
+    writeInt(_type);
+	writeString(_filename);
+    writeString(_ecdagPath);
+}
+
+void AGCommand::resolveType15() {
+	_filename = readString();
+    _ecdagPath = readString();
+}
+
+// for exec tasks
+void AGCommand::buildType16(int type, const std::string& filename, int ecTaskNum) {
+    _type = type;
+    _filename = filename;
+    _ecTaskNum = ecTaskNum;
+    writeInt(_type);
+    writeString(_filename);
+    writeInt(_ecTaskNum);
+}
+
+void AGCommand::resolveType16() {
+    _filename = readString();
+    _ecTaskNum = readInt();
+}
+
 
 void AGCommand::dump() {
   if (_type == 0) {

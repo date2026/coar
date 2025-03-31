@@ -18,7 +18,7 @@ do
 	# scp -r $DIR $USER@$host:/home/openec/
 
 
-	scp $DIR/build/ECAgent $DIR/build/ECClient $DIR/build/HDFSDemo $USER@$host:$DIR/build/
+	scp $DIR/build/ECAgent $DIR/build/ECClient $DIR/build/HDFSDemo $DIR/build/ECTest $DIR/build/input_16MB_random $USER@$host:$DIR/build/
 	scp $DIR/conf/1.json $USER@$host:$DIR/conf/
 	ssh $USER@$host "sed -i 's#\"local_ip\": \"192\.168\.220\.160\"#\"local_ip\": \"'\"$ip\"'\"#g' $DIR/conf/1.json"
 } &

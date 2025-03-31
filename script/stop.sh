@@ -16,3 +16,18 @@ do
 done
 wait
 
+
+for((i=1;i<=1;i++));
+do
+{
+	if [[ $i -ge 0 && $i -lt 10 ]]
+	then
+        	host=${NODE_NAME}0${i}
+    	else
+            host=${NODE_NAME}$i
+    	fi
+	ssh $USER@$host "killall ECClient"
+} &
+done
+wait
+

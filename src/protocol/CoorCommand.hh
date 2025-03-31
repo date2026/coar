@@ -65,6 +65,12 @@ class CoorCommand {
     // type12
     string _benchname;
 
+    // type13, for encode
+    std::string _ecdagPath;
+    // type14, for decode
+    int _objNum;
+    vector<int> _objIds;
+
   public:
     CoorCommand();
     ~CoorCommand();
@@ -90,6 +96,7 @@ class CoorCommand {
     string getECType();
     vector<int> getCorruptIdx();
     string getBenchName();
+    std::string getEcdagPath() const { return _ecdagPath; };
 
     // send method
     void sendTo(unsigned int ip);
@@ -128,6 +135,12 @@ class CoorCommand {
     void buildType12(int type,
                      unsigned int ip,
                      string benchname);
+    // for encode
+    void buildType13(int type, const string& filename, 
+                     unsigned int sendIp, const std::string& ecdagPath);
+
+    void buildType14(int type, const string& filename, 
+                     unsigned int sendIp, const std::string& ecdagPath);
     // resolve CoorCommand
     void resolveType0();
     void resolveType1();
@@ -141,6 +154,8 @@ class CoorCommand {
     void resolveType9();
     void resolveType11();
     void resolveType12();
+    void resolveType13();
+    void resolveType14();
 
     // for debug
     void dump();

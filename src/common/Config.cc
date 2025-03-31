@@ -30,6 +30,24 @@ Config::Config(const std::string& file_path) {
     _objSize = conf.at("obj_size").get<int>();
     _agWorkerThreadNum = conf.at("agent_worker_thread_num").get<int>();
     _coorThreadNum = conf.at("coordinator_thread_num").get<int>();
+
+    json ecParam = conf.at("ec_param");
+    std::string ecType = ecParam.at("ec_type").get<std::string>();
+    if (ecType == "RS") {
+        _ecType = ECType::RS;
+        _rsParam.n = ecParam.at("n").get<int>();
+        _rsParam.k = ecParam.at("k").get<int>();
+        _rsParam.w = ecParam.at("w").get<int>();
+    } else if (ecType == "LRC") {
+        _ecType = ECType::LRC;
+        assert(false && "not implemented");
+    } else if (ecType == "MSR") {
+        _ecType = ECType::MSR;
+        assert(false && "not implemented");
+    } else {
+        assert(false && "invalid ec type");
+    }
+
 }
 
 
@@ -41,8 +59,8 @@ Config::~Config() {
 
 
 void Config::DumpConfig() const {
-    std::cout << "local_ip: " << _localIp << std::endl;
-    std::cout << "coor_ip: " << _coorIp << std::endl;
+    std::cout << "local_ip: " << ipInt2String(_localIp) << std::endl;
+    std::cout << "coor_ip: " << ipInt2String(_coorIp) << std::endl;
     std::cout << "agent_num: " << _agent_num << std::endl;
     std::cout << "agent_ips: ";
     for (auto& ip : _agent_ips) {
@@ -52,6 +70,7 @@ void Config::DumpConfig() const {
     std::cout << "obj_size(MByte): " << _objSize << std::endl;
     std::cout << "agent_worker_thread_num: " << _agWorkerThreadNum << std::endl;
     std::cout << "coordination_thread_num: " << _coorThreadNum << std::endl;
+    std::cout << "k: " << _rsParam.k << ", n: " << _rsParam.n << ", w: " << _rsParam.w << std::endl;
     std::cout << std::endl;
 }
 

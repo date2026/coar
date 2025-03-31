@@ -21,5 +21,11 @@
     "pkt_size": 1048576,
     "obj_size": 4,
     "agent_worker_thread_num": 8,
-    "coordinator_thread_num": 8
+    "coordinator_thread_num": 8,
+    "ec_param": {
+        "ec_type": "RS",
+        "k": 4,
+        "n": 6,
+        "w": 8
+    }
 }
