@@ -38,7 +38,8 @@ public:
     void encode(CoorCommand* coorCmd);
     void decode(CoorCommand* coorCmd);
     void encodeRS(const std::string& filename, FileMeta* fileMeta, const std::string& ecdagPath);
-    void decodeRS(const std::string& filename, FileMeta* fileMeta, const std::string& ecdagPath);
+    void decodeRS(const std::string& filename, FileMeta* fileMeta, const std::string& ecdagPath,
+                  const std::vector<int>& survivedObjIds, int failedObjId);
 
 };
 

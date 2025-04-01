@@ -359,11 +359,14 @@ void ECWorker::clientEncode(AGCommand* agCmd) {
 void ECWorker::clientDecode(AGCommand* agCmd) {
     const std::string filename = agCmd->getFilename();
     const std::string ecdagPath = agCmd->getEcdagPath();
-    LOG_INFO("clientDecode start, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+    const std::vector<int> survivedObjIds = agCmd->getSurvivedObjIds();
+    const int failedObjId = agCmd->getFailedObjId();
+    LOG_INFO("clientDecode start, filename: %s, ecdagPath: %s, survivedObjIds: %s, failedObjId: %d", 
+             filename.c_str(), ecdagPath.c_str(), vec2String(survivedObjIds).c_str(), failedObjId);
 
     // 1. send decode request to coordinator
     CoorCommand* coorCmd = new CoorCommand();
-    coorCmd->buildType14(14, filename, _conf->_localIp, ecdagPath);
+    coorCmd->buildType14(14, filename, _conf->_localIp, ecdagPath, survivedObjIds, failedObjId);
     coorCmd->sendTo(_coorCtx);
     delete coorCmd;
     LOG_INFO("clientDecode send decode request to coordinator, wait for decode done, filename: %s", filename.c_str());
@@ -379,7 +382,7 @@ void ECWorker::clientDecode(AGCommand* agCmd) {
 
     // 3. send decode done to client
     const std::string decodeDoneKey = filename + "_agent_decode_done";
-    redisReply* agentDecodeDoneReply = (redisReply*)redisCommand(_localCtx, "rpush 1", decodeDoneKey.c_str());
+    redisReply* agentDecodeDoneReply = (redisReply*)redisCommand(_localCtx, "rpush %s 1", decodeDoneKey.c_str());
     assert(agentDecodeDoneReply != NULL && agentDecodeDoneReply->type == REDIS_REPLY_INTEGER);
     freeReplyObject(agentDecodeDoneReply);
     LOG_INFO("ECWorker::clientDecode done, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
@@ -541,7 +544,6 @@ void ECWorker::execEncodeECTask(const std::string& filename, const ECTask* task,
     }
     char* encodeBuf = new char[objSizeByte];            // will insert into objBuffer, free by objBuffer
     memset(encodeBuf, 0, objSizeByte);
-    // TODO: check parameters for encode, especially coefs(matrix)
     RSPlan::encode(objBufs, encodeBuf, coefs, _conf->_rsParam.w, objSizeByte);
     objBuffer->insertObj(tmpObjId, encodeBuf);
     LOG_INFO("execEncodeECTask done, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, encodePatternId: %d, coefs: %s",

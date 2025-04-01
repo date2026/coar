@@ -35,6 +35,7 @@ CoorCommand::CoorCommand(char* reqStr) {
     case 11: resolveType11(); break;
     case 12: resolveType12(); break;
     case 13: resolveType13(); break;
+    case 14: resolveType14(); break;
     default: break;
   }
   _coorCmd = nullptr;
@@ -351,7 +352,7 @@ void CoorCommand::resolveType13() {
 }
 
 void CoorCommand::buildType14(int type, const string& filename, 
-    unsigned int sendIp, const std::string& ecdagPath) {
+    unsigned int sendIp, const std::string& ecdagPath, const std::vector<int>& survivedObjIds, int failedObjId) {
     _type = type;
     _clientIp = sendIp;
     _filename = filename;
@@ -361,12 +362,22 @@ void CoorCommand::buildType14(int type, const string& filename,
     writeInt(_clientIp);
     writeString(_filename);
     writeString(_ecdagPath);
+    writeInt(survivedObjIds.size());
+    for (int i = 0; i < survivedObjIds.size(); i++) {
+        writeInt(survivedObjIds[i]);
+    }
+    writeInt(failedObjId);
 }
 
 void CoorCommand::resolveType14() {
     _clientIp = readInt();
     _filename = readString();
     _ecdagPath = readString();
+    int survivedObjIdsSize = readInt();
+    for (int i = 0; i < survivedObjIdsSize; i++) {
+        _survivedObjIds.push_back(readInt());
+    }
+    _failedObjId = readInt();
 }
 
 

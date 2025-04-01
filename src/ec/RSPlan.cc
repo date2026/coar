@@ -7,18 +7,17 @@ RSPlan::RSPlan(Config* conf, FileMeta* fileMeta, const std::string& ecdagPath, i
     _n = n;
     _w = w;
     generateMatrix();
-    generateDecodeMatrix();
     setRSTasks();
 }
 
 
-RSPlan::RSPlan(Config* conf, FileMeta* fileMeta, const std::string& ecdagPath, int k, int n, int w, bool decode) 
-               : ECPlan(conf, fileMeta, ecdagPath) {
+RSPlan::RSPlan(Config* conf, FileMeta* fileMeta, const std::string& ecdagPath, int k, int n, int w, 
+               const std::vector<int>& survivedObjIds, int failedObjId) : ECPlan(conf, fileMeta, ecdagPath) {
     _k = k;
     _n = n;
     _w = w;
     generateMatrix();
-    // TODO: invert encode matrix for decode
+    generateDecodeMatrix(survivedObjIds, failedObjId);
     setRSTasks();
 }
 
@@ -70,6 +69,7 @@ void RSPlan::setRSTasks() {
  * PERSIST [nodeId] [tmpObjId] [objId]
  */
 void RSPlan::setRSTask(const std::vector<std::string>& taskInfo, ECTask* task) {
+    int rowId;
     switch (task->_type) {
         case ECTaskType::SEND:
             assert(taskInfo.size() == 3 && "SEND task info size error");
@@ -94,15 +94,21 @@ void RSPlan::setRSTask(const std::vector<std::string>& taskInfo, ECTask* task) {
             }
             task->_tmpObjId = std::stoi(taskInfo[1 + _k]);
             task->_encodePatternId = std::stoi(taskInfo[2 + _k]);
+            if (task->_encodePatternId == -1) {             // decode
+                task->_coefs = _encodeMatrix[_failedRowId];
+                break;
+            }
             assert(task->_encodePatternId >= 0 && task->_encodePatternId < _k);
             task->_coefs = _encodeMatrix[_k + task->_encodePatternId];
             assert(task->_coefs.size() == _k && "encode pattern size error");
             break;
         case ECTaskType::PERSIST:
-            assert(taskInfo.size() == 3 && "PERSIST task info size error");
+            assert(taskInfo.size() == 4 && "PERSIST task info size error");
             task->_nodeId = std::stoi(taskInfo[0]);
             task->_tmpObjId = std::stoi(taskInfo[1]);
             task->_objId = std::stoi(taskInfo[2]);
+            rowId = std::stoi(taskInfo[3]);
+            _fileMeta->setRowId(task->_objId, rowId);       // set rowId of this obj, used in decode to know which row this obj is
             break;
         default:
             assert(false && "undefined ECTaskType");
@@ -139,36 +145,50 @@ void RSPlan::generateMatrix() {
 
 }
 
-void RSPlan::generateDecodeMatrix() {
-    // int* selectMatrix = new int [k * k];
-    // memset(selectMatrix, 0, k * k * sizeof(int));
-    // for (int i = 0; i < k; i++) {
-    //     for (int j = 0; j < k; j++) {
-    //         selectMatrix[i * k + j] = encodeMatrix[stripeOffset][j];
-    //         printf("%d ", selectMatrix[i * k + j]);
-    //     }
-    // }
-    
-    // LOG_INFO("print encodedMatrix");
-    // for (int i = 0; i < _conf->_information_bits + _conf->_parity_bits; i++) {
-    //     for (int j = 0; j < _conf->_information_bits; j++) {
-    //         printf("%d ", encodeMatrix[i][j]);
-    //     }
-    //     printf("\n");
-    // }
-    // LOG_INFO("print selectMatrix");
-    // for (int i = 0; i < _conf->_information_bits; i++) {
-    //     for (int j = 0; j < _conf->_information_bits; j++) {
-    //         printf("%d ", selectMatrix[i * k + j]);
-    //     }
-    //     printf("\n");
-    // }
+void RSPlan::generateDecodeMatrix(const std::vector<int>& survivedObjIds, int failedObjId) {
+    int* selectMatrix = new int [_k * _k];
+    memset(selectMatrix, 0, _k * _k * sizeof(int));
+    std::vector<int> survivedRowIds;
+    int failedRowId = _fileMeta->getRowId(failedObjId);
+    _failedRowId = failedRowId;
+    for (auto survivedObjId : survivedObjIds) {
+        int rowId = _fileMeta->getRowId(survivedObjId);
+        survivedRowIds.push_back(rowId);
+    }
+    LOG_INFO("survived obj ids: %s, failed obj id: %d", vec2String(survivedObjIds).c_str(), failedObjId);
+    LOG_INFO("survived row ids: %s, failed row id: %d", vec2String(survivedRowIds).c_str(), failedRowId);
 
-    // int* invertMatrix = new int[k * k];
-    // jerasure_invert_matrix(selectMatrix, invertMatrix, k, _codec->GetExtension());
-    // int* selectVector = new int[k];
-    // memcpy(selectVector, encodeMatrix[errorStripeOffset].data(), k * sizeof(int));
-    // int* coefVector = jerasure_matrix_multiply(selectVector, invertMatrix, 1, k, k, k, _codec->GetExtension());
+    // get select matrix
+    for (int i = 0; i < _k; i++) {
+        int survivedRowId = survivedRowIds[i];
+        memcpy(selectMatrix + i * _k, _encodeMatrix[survivedRowId].data(), _k * sizeof(int));
+    }
+
+    LOG_INFO("select matrix: ");
+    for (int i = 0; i < _k; i++) {
+        for (int j = 0; j < _k; j++) {
+            printf("%d ", selectMatrix[i * _k + j]);
+        }
+        printf("\n");
+    }
+
+    // get invert matrix
+    int* invertMatrix = new int [_k * _k];
+    jerasure_invert_matrix(selectMatrix, invertMatrix, _k, _w);
+    int* selectVector = new int [_k];
+    memcpy(selectVector, _encodeMatrix[failedRowId].data(), _k * sizeof(int));
+    int* coefVector = jerasure_matrix_multiply(selectVector, invertMatrix, 1, _k, _k, _k, _w);
+    LOG_INFO("coef vector: ");
+    for (int i = 0; i < _k; i++) {
+        printf("%d ", coefVector[i]);
+    }
+    printf("\n");
+    memcpy(_encodeMatrix[failedRowId].data(), coefVector, _k * sizeof(int));
+    
+    delete [] coefVector;
+    delete [] selectMatrix;
+    delete [] invertMatrix;
+    delete [] selectVector;
 }
 
 /**

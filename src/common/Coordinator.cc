@@ -158,7 +158,10 @@ void Coordinator::decode(CoorCommand* coorCmd) {
     const std::string filename = coorCmd->getFilename();
     unsigned sendIp = coorCmd->getClientip();
     const std::string ecdagPath = coorCmd->getEcdagPath();
-    LOG_INFO("Coordinator::decode, filename: %s, ecdagPath: %s, sendIp: %s", filename.c_str(), ecdagPath.c_str(), RedisUtil::ip2Str(sendIp).c_str());
+    const std::vector<int> survivedObjIds = coorCmd->getSurvivedObjIds();
+    const int failedObjId = coorCmd->getFailedObjId();
+    LOG_INFO("Coordinator::decode, filename: %s, ecdagPath: %s, sendIp: %s, survivedObjIds: %s, failedObjId: %d", 
+             filename.c_str(), ecdagPath.c_str(), RedisUtil::ip2Str(sendIp).c_str(), vec2String(survivedObjIds).c_str(), failedObjId);
     
     // 1. ensure file exist
     assert(_stripeStore->existFile(filename));
@@ -170,7 +173,7 @@ void Coordinator::decode(CoorCommand* coorCmd) {
 
     switch (_conf->_ecType) {
         case ECType::RS:
-            decodeRS(filename, fileMeta, ecdagPath);
+            decodeRS(filename, fileMeta, ecdagPath, survivedObjIds, failedObjId);
             break;
         case ECType::LRC:
             assert(false && "not implemented");
@@ -187,7 +190,7 @@ void Coordinator::decode(CoorCommand* coorCmd) {
     const std::string decodeDoneKey = filename + "_coordinator_decode_done";
     redisContext* decodeDoneCtx = RedisUtil::createContext(sendIp);
     assert(decodeDoneCtx != NULL && "Failed to create redis context");
-    redisReply* decodeDoneReply = (redisReply*)redisCommand(decodeDoneCtx, "rpush 1", decodeDoneKey.c_str());
+    redisReply* decodeDoneReply = (redisReply*)redisCommand(decodeDoneCtx, "rpush %s 1", decodeDoneKey.c_str());
     assert(decodeDoneReply != NULL && decodeDoneReply->type == REDIS_REPLY_INTEGER);
     freeReplyObject(decodeDoneReply);
     redisFree(decodeDoneCtx);
@@ -218,13 +221,14 @@ void Coordinator::encodeRS(const std::string& filename, FileMeta* fileMeta, cons
 }
 
 
-void Coordinator::decodeRS(const std::string& filename, FileMeta* fileMeta, const std::string& ecdagPath) {
+void Coordinator::decodeRS(const std::string& filename, FileMeta* fileMeta, const std::string& ecdagPath,
+                           const std::vector<int>& survivedObjIds, int failedObjId) {      
     int k = _conf->_rsParam.k;
     int n = _conf->_rsParam.n;
     int w = _conf->_rsParam.w;
 
     // 1. init ECPlan
-    RSPlan* rsPlan = new RSPlan(_conf, fileMeta, ecdagPath, k, n, w, true);
+    RSPlan* rsPlan = new RSPlan(_conf, fileMeta, ecdagPath, k, n, w, survivedObjIds, failedObjId);
 
     // 2. send ec tasks
     rsPlan->send();

@@ -14,7 +14,7 @@ const std::string confPath = "/home/openec/lmq_openec/conf/1.json";
 void write(const std::string& file_path, const std::string& saveas, const std::string& ecidpool, int size);
 void read(const std::string& file_name, const std::string& saveas);
 void encode(const std::string& filename, const std::string& ecdagPath);
-void decode(const std::string& filename, const std::string& ecdagPath);
+void decode(const std::string& filename, const std::string& ecdagPath, std::vector<int>& survivedObjIds, int failedObjId);
 
 int main(int argc, char** argv) {
     assert(argc >= 2);
@@ -39,10 +39,16 @@ int main(int argc, char** argv) {
         const std::string ecdagPath(argv[3]);
         encode(filename, ecdagPath);
     } else if (req_type == "decode") {
-        assert(argc == 4);
+        assert(argc > 4);
         const std::string filename(argv[2]);
         const std::string ecdagPath(argv[3]);
-        decode(filename, ecdagPath);
+        std::vector<int> survivedObjIds;
+        for (int i = 4; i < argc - 1; i++) {
+            int objId = std::stoi(argv[i]);
+            survivedObjIds.push_back(objId);
+        } 
+        int failedObjId = std::stoi(argv[argc - 1]);
+        decode(filename, ecdagPath, survivedObjIds, failedObjId);
     } else if (req_type == "repair") {
         assert(argc == 2);
     } else {
@@ -141,8 +147,9 @@ void encode(const std::string& filename, const std::string& ecdagPath) {
 }
 
 
-void decode(const std::string& filename, const std::string& ecdagPath) {
-    LOG_INFO("encode, filename: %s, ecdagPath: %s", filename.c_str(), ecdagPath.c_str());
+void decode(const std::string& filename, const std::string& ecdagPath, std::vector<int>& survivedObjIds, int failedObjId) {
+    LOG_INFO("decode, filename: %s, ecdagPath: %s, survivedObjIds: %s, failedObjId: %d", 
+             filename.c_str(), ecdagPath.c_str(), vec2String(survivedObjIds).c_str(), failedObjId);
     Config* conf = new Config(confPath);
 
     struct timeval decodeStart, decodeEnd;
@@ -150,7 +157,7 @@ void decode(const std::string& filename, const std::string& ecdagPath) {
     
     // 1. send decode request to agent
     AGCommand* agCmd = new AGCommand();
-    agCmd->buildType15(14, filename, ecdagPath);
+    agCmd->buildType15(15, filename, ecdagPath, survivedObjIds, failedObjId);
     agCmd->sendTo(conf->_localIp);
     delete agCmd;
 

@@ -14,6 +14,8 @@ public:
     int getObjNum() const { return _objNum; }
     std::vector<int> getObjLocs() const { return _objLocs; }
     std::string getFileName() const { return _filename; }
+    int getRowId(int objId) const { assert(_objId2RowId.find(objId) != _objId2RowId.end()); return _objId2RowId.at(objId); }
+    void setRowId(int objId, int rowId) { _objId2RowId[objId] = rowId; }
     void lock() { _mutex.lock(); }
     void unlock() { _mutex.unlock(); }
 
@@ -24,6 +26,7 @@ private:
     int _fileSize;       // in Byte
     int _objNum;
     std::vector<int> _objLocs;
+    std::unordered_map<int, int> _objId2RowId;
     std::mutex _mutex;
     std::string _filename;
 };

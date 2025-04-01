@@ -567,18 +567,29 @@ void AGCommand::resolveType14() {
 }
 
 // for decode
-void AGCommand::buildType15(int type, const std::string& filename, const std::string& ecdagPath) {
+void AGCommand::buildType15(int type, const std::string& filename, const std::string& ecdagPath,
+                            const std::vector<int>& survivedObjIds, int failedObjId) {
     _type = type;
 	_filename = filename;
     _ecdagPath = ecdagPath;
     writeInt(_type);
 	writeString(_filename);
     writeString(_ecdagPath);
+    writeInt(survivedObjIds.size());
+    for (int i = 0; i < survivedObjIds.size(); i++) {
+        writeInt(survivedObjIds[i]);
+    }
+    writeInt(failedObjId);
 }
 
 void AGCommand::resolveType15() {
 	_filename = readString();
     _ecdagPath = readString();
+    int survivedObjIdsSize = readInt();
+    for (int i = 0; i < survivedObjIdsSize; i++) {
+        _survivedObjIds.push_back(readInt());
+    }
+    _failedObjId = readInt();
 }
 
 // for exec tasks

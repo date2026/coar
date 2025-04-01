@@ -63,20 +63,70 @@ int main() {
     fclose(codingFile);
     
     // encode 1
-    encodeMatrix = matrix + (k + 1) * k;
-    jerasure_matrix_encode(k, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
-    printf("print encode matrix\n");
+    // encodeMatrix = matrix + (k + 1) * k;
+    // jerasure_matrix_encode(k, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
+    // printf("print encode matrix\n");
+    // for (int i = 0; i < k; i++) {
+    //     printf("%d ", encodeMatrix[i]);
+    // }
+    // printf("\n");
+    // codingFileName = filePath + "_encode_1";
+    // codingFile = fopen(codingFileName.c_str(), "wb+");
+    // assert(codingFile != NULL && "Failed to open file");
+    // fwrite(coding_ptrs[0], objSizeByte, 1, codingFile);
+    // fclose(codingFile);
+    
+    // ================================================================
+    int* selectMatrix = new int [k * k];
+    // copy 0 ... k - 2
+    for (int i = 0; i < k - 1; i++) {
+        memcpy(selectMatrix + i * k, matrix + i * k, k * sizeof(int));
+    }
+    // copy k
+    memcpy(selectMatrix + (k - 1) * k, matrix + k * k, k * sizeof(int));
+    printf("print select matrix\n");
     for (int i = 0; i < k; i++) {
-        printf("%d ", encodeMatrix[i]);
+        for (int j = 0; j < k; j++) {
+            printf("%d ", selectMatrix[i * k + j]);
+        }
+        printf("\n");
+    }
+
+    int* invertMatrix = new int [k * k];
+    jerasure_invert_matrix(selectMatrix, invertMatrix, k, w);
+    // copy k - 1
+    int* selectVector = new int [k];
+    memcpy(selectVector, matrix + (k - 1) * k, k * sizeof(int));
+    printf("print selectVector\n");
+    for (int i = 0; i < k; i++) {
+        printf("%d ", selectVector[i]);
     }
     printf("\n");
-    codingFileName = filePath + "_encode_1";
+    int* coefVector = jerasure_matrix_multiply(selectVector, invertMatrix, 1, k, k, k, w);
+    printf("print coefVector\n");
+    for (int i = 0; i < k; i++) {
+        printf("%d ", coefVector[i]);
+    }
+    printf("\n");
+    char** data_ptrs_4_decode = new char* [k];
+    // copy data
+    for (int i = 0; i < k - 1; i++) {
+        data_ptrs_4_decode[i] = new char [objSizeByte];
+        memcpy(data_ptrs_4_decode[i], data_ptrs[i], objSizeByte);
+    }
+    data_ptrs_4_decode[k - 1] = new char [objSizeByte];
+    memcpy(data_ptrs_4_decode[k - 1], coding_ptrs[0], objSizeByte);
+
+    char** coding_ptrs_4_decode = new char* [1];
+    coding_ptrs_4_decode[0] = new char [objSizeByte];
+
+    // decode
+    jerasure_matrix_encode(k, 1, w, coefVector, data_ptrs_4_decode, coding_ptrs_4_decode, objSizeByte);
+    codingFileName = filePath + "_decode";
     codingFile = fopen(codingFileName.c_str(), "wb+");
     assert(codingFile != NULL && "Failed to open file");
-    fwrite(coding_ptrs[0], objSizeByte, 1, codingFile);
+    fwrite(coding_ptrs_4_decode[0], objSizeByte, 1, codingFile);
     fclose(codingFile);
-    
-    
 
  
 

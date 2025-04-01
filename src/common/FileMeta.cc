@@ -28,6 +28,9 @@ FileMeta::FileMeta(const std::string& filename, int fileSize, int objNum, const 
     _objNum = objNum;
     _objLocs = objLocs;
     _filename = filename;
+    for (int i = 0; i < _objNum; i++) {
+        _objId2RowId[i] = i;
+    }
 }
 
 

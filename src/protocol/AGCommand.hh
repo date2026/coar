@@ -87,6 +87,10 @@ class AGCommand {
     // type 14 encode
     std::string _ecdagPath;
 
+    // type 15 decode
+    std::vector<int> _survivedObjIds;
+    int _failedObjId;
+
     // type 16 ectask
     int _ecTaskNum;
 
@@ -129,6 +133,8 @@ class AGCommand {
 	std::vector<int> getObjLocs() const { return _objLocs; };
     int getObjIdx() { return _objIdx; }
     std::string getEcdagPath() const { return _ecdagPath; };
+    std::vector<int> getSurvivedObjIds() const { return _survivedObjIds; }
+    int getFailedObjId() const { return _failedObjId; }
     int getEcTaskNum() const { return _ecTaskNum; }
     // send method
     void setRkey(string key);
@@ -199,7 +205,8 @@ class AGCommand {
     void buildType14(int type, const std::string& filename, const std::string& ecdagPath);
 
     // for decode
-    void buildType15(int type, const std::string& filename, const std::string& ecdagPath);
+    void buildType15(int type, const std::string& filename, const std::string& ecdagPath,
+                     const std::vector<int>& survivedObjIds, int failedObjId);
 
     // for send ectasks
     void buildType16(int type, const std::string& filename, int taskNum);
