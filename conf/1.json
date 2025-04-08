@@ -19,7 +19,7 @@
         "9000"
     ],
     "pkt_size": 1048576,
-    "obj_size": 4,
+    "obj_size": 256,
     "agent_worker_thread_num": 8,
     "coordinator_thread_num": 8,
     "ec_param": {

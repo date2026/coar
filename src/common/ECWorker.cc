@@ -157,11 +157,12 @@ void ECWorker::loadWorker(BlockingQueue<ECDataPacket*>* readQueue,
 	for (int i = 0; i < round; i++) {
 		int curidx = startidx + i * step;
 		string key = keybase + ":" + to_string(curidx);
-		redisAppendCommand(readCtx, "blpop %s 1", key.c_str());
+		redisAppendCommand(readCtx, "blpop %s 0", key.c_str());
 	}
 	redisReply* rReply;
 	for (int i=0; i<round; i++) {
 		redisGetReply(readCtx, (void**)&rReply);
+        assert(rReply != NULL && rReply->type == REDIS_REPLY_ARRAY && rReply->elements == 2);
 		char* content = rReply->element[1]->str;
 		ECDataPacket* pkt = new ECDataPacket(content);
 		int curDataLen = pkt->getDatalen();
@@ -205,6 +206,8 @@ void ECWorker::send4PersistObjWorker(BlockingQueue<ECDataPacket*>* readQueue,
 }
 
 void ECWorker::receiveObjAndPersist(AGCommand* agCmd) {
+    struct timeval receiveStart, receiveEnd, persistStart, persistEnd;
+    gettimeofday(&receiveStart, NULL);
 	const std::string objname = agCmd->getFilename();
 	const std::string key = objname + "_persist";
 	LOG_INFO("receiveObjAndPersist start, objname: %s", objname.c_str());
@@ -215,15 +218,16 @@ void ECWorker::receiveObjAndPersist(AGCommand* agCmd) {
 	assert(rReply != NULL && rReply->type == REDIS_REPLY_ARRAY && rReply->elements == 2);
 	memcpy(buf, rReply->element[1]->str, bufSize);
 	freeReplyObject(rReply);
-	LOG_INFO("receiveObjAndPersist, receive objname: %s", objname.c_str());
-
+    gettimeofday(&receiveEnd, NULL);
+	LOG_INFO("receiveObjAndPersist, receive objname: %s, receive time: %f ms", objname.c_str(), RedisUtil::duration(receiveStart, receiveEnd));
+    gettimeofday(&persistStart, NULL);
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::WRITE);
     _hdfsHandler->write2HDFS(file, buf, bufSize);
     _hdfsHandler->closeFile(file);
-
+    gettimeofday(&persistEnd, NULL);
 	// write2HDFS((hdfsFS)_underfs, objname, buf, bufSize);
 	delete[] buf;
-	LOG_INFO("receiveObjAndPersist done, objname: %s", objname.c_str());
+	LOG_INFO("receiveObjAndPersist done, objname: %s, persist time: %f ms", objname.c_str(), RedisUtil::duration(persistStart, persistEnd));
 }
 
 
@@ -313,6 +317,7 @@ void ECWorker::readObj(AGCommand* agCmd) {
     redisFree(readObjCtx);
     LOG_INFO("readObj done, send ip: %s, filename: %s, objIdx: %d, size: %d", 
             RedisUtil::ip2Str(sendIp).c_str(), filename.c_str(), objIdx, bufSize);
+    delete [] buf;
 }
 
 /**
@@ -466,7 +471,8 @@ void ECWorker::execSendECTask(const std::string& filename, const ECTask* task, O
     const int srcNodeId = task->_srcNodeId;
     const int dstNodeId = task->_dstNodeId;
     const int objId = task->_objId;
-
+    struct timeval sendStart, sendEnd;
+    gettimeofday(&sendStart, NULL);
     LOG_INFO("execSendECTask start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
     
@@ -494,8 +500,9 @@ void ECWorker::execSendECTask(const std::string& filename, const ECTask* task, O
     assert(sendObjReply != NULL && sendObjReply->type == REDIS_REPLY_INTEGER);
     freeReplyObject(sendObjReply);
     redisFree(sendObjCtx);
-    LOG_INFO("execSendECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
-            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
+    gettimeofday(&sendEnd, NULL);
+    LOG_INFO("execSendECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, time: %f ms", 
+            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, RedisUtil::duration(sendStart, sendEnd));
 }
 
 void ECWorker::execReceiveECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
@@ -504,7 +511,8 @@ void ECWorker::execReceiveECTask(const std::string& filename, const ECTask* task
     const int srcNodeId = task->_srcNodeId;
     const int objId = task->_objId;
     const int tmpObjId = task->_tmpObjId;
-
+    struct timeval receiveStart, receiveEnd;
+    gettimeofday(&receiveStart, NULL);
     LOG_INFO("execReceiveECTask start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d", 
             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId);
     const std::string receiveObjKey = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
@@ -518,8 +526,9 @@ void ECWorker::execReceiveECTask(const std::string& filename, const ECTask* task
     memcpy(obj, taskStr, objSizeByte);
     objBuffer->insertObj(tmpObjId, obj);
     freeReplyObject(receiveObjRely);
-    LOG_INFO("execReceiveECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d", 
-             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId);
+    gettimeofday(&receiveEnd, NULL);
+    LOG_INFO("execReceiveECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d, receive time: %f ms", 
+             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId, RedisUtil::duration(receiveStart, receiveEnd));
 }
 
 void ECWorker::execEncodeECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
@@ -528,7 +537,8 @@ void ECWorker::execEncodeECTask(const std::string& filename, const ECTask* task,
     const int tmpObjId = task->_tmpObjId;
     const std::vector<int> coefs = task->_coefs;
     int objSizeByte = _conf->_objSize * 1024 * 1024;
-
+    struct timeval encodeStart, encodeEnd;
+    gettimeofday(&encodeStart, NULL);
     LOG_INFO("execEncodeECTask start, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, encodePatternId: %d, coefs: %s",
              filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, 
              task->_encodePatternId, vec2String(coefs).c_str()); 
@@ -546,9 +556,10 @@ void ECWorker::execEncodeECTask(const std::string& filename, const ECTask* task,
     memset(encodeBuf, 0, objSizeByte);
     RSPlan::encode(objBufs, encodeBuf, coefs, _conf->_rsParam.w, objSizeByte);
     objBuffer->insertObj(tmpObjId, encodeBuf);
-    LOG_INFO("execEncodeECTask done, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, encodePatternId: %d, coefs: %s",
+    gettimeofday(&encodeEnd, NULL);
+    LOG_INFO("execEncodeECTask done, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, encodePatternId: %d, coefs: %s, encode time: %f ms",
              filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, 
-             task->_encodePatternId, vec2String(coefs).c_str()); 
+             task->_encodePatternId, vec2String(coefs).c_str(), RedisUtil::duration(encodeStart, encodeEnd)); 
 
 }
 
@@ -556,8 +567,9 @@ void ECWorker::execPersistECTask(const std::string& filename, const ECTask* task
     const int nodeId = task->_nodeId;
     const int objId = task->_objId;
     const int tmpObjId = task->_tmpObjId;
-
-    LOG_INFO("execSendECTask start, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
+    struct timeval persistStart, persistEnd;
+    gettimeofday(&persistStart, NULL);
+    LOG_INFO("execPersistECTask start, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
     if (!objBuffer->existObj(tmpObjId)) {
         LOG_ERROR("execPersistECTask, tmpObjId: %d not exist", tmpObjId);
         assert(false && "tmpObj not exist");
@@ -569,5 +581,8 @@ void ECWorker::execPersistECTask(const std::string& filename, const ECTask* task
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::WRITE);
     _hdfsHandler->write2HDFS(file, objBuf, objSizeByte);
     _hdfsHandler->closeFile(file);
+    gettimeofday(&persistEnd, NULL);
+    LOG_INFO("execPersistECTask done, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d, persist time: %f ms", 
+            filename.c_str(), nodeId, objId, tmpObjId, RedisUtil::duration(persistStart, persistEnd));
     
 }

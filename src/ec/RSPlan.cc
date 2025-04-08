@@ -146,6 +146,8 @@ void RSPlan::generateMatrix() {
 }
 
 void RSPlan::generateDecodeMatrix(const std::vector<int>& survivedObjIds, int failedObjId) {
+    LOG_INFO("RSPlan::generateDecodeMatrix start, survivedObjIds: %s, failedObjId: %d", 
+             vec2String(survivedObjIds).c_str(), failedObjId);
     int* selectMatrix = new int [_k * _k];
     memset(selectMatrix, 0, _k * _k * sizeof(int));
     std::vector<int> survivedRowIds;

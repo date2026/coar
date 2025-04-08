@@ -56,3 +56,12 @@ void FileMeta::dumpFileMeto2Buf(char* buf) const {
         offset += sizeof(int);
     }
 }
+
+void FileMeta::dumpFileMeta() const {
+    LOG_INFO("dump file meta");
+    LOG_INFO("obj locs: %s", vec2String(_objLocs).c_str());
+    LOG_INFO("obj id to row id: ");
+    for (auto it = _objId2RowId.begin(); it != _objId2RowId.end(); it++) {
+        LOG_INFO("obj id: %d, row id: %d", it->first, it->second);
+    }
+}

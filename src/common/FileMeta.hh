@@ -20,7 +20,7 @@ public:
     void unlock() { _mutex.unlock(); }
 
     void dumpFileMeto2Buf(char* buf) const;
-
+    void dumpFileMeta() const;
 
 private:
     int _fileSize;       // in Byte

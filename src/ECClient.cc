@@ -94,7 +94,8 @@ void write(const std::string& filePath, const std::string& saveAs, const std::st
 
 
     gettimeofday(&writeEnd, NULL);
-    LOG_INFO("write time: %f ms", RedisUtil::duration(writeStart, writeEnd));
+    LOG_INFO("write time: %f ms, write throughput: %f MB/s", RedisUtil::duration(writeStart, writeEnd),
+             (double)sizeinMB / RedisUtil::duration(writeStart, writeEnd) * 1000);
 
 }
 
@@ -142,7 +143,8 @@ void encode(const std::string& filename, const std::string& ecdagPath) {
 
     // 3. clean
     gettimeofday(&encodeEnd, NULL);
-    cout << "encode.overall.duration: " << RedisUtil::duration(encodeStart, encodeEnd) << endl;
+    LOG_INFO("encode time: %f ms, encode throughput: %f MB/s", RedisUtil::duration(encodeStart, encodeEnd), 
+             (double)conf->_objSize / RedisUtil::duration(encodeStart, encodeEnd) * 1000);
     delete conf;
 }
 
@@ -176,6 +178,7 @@ void decode(const std::string& filename, const std::string& ecdagPath, std::vect
 
     // 3. clean
     gettimeofday(&decodeEnd, NULL);
-    cout << "decode.overall.duration: " << RedisUtil::duration(decodeStart, decodeEnd) << endl;
+    LOG_INFO("decode time: %f ms, decode throughput: %f MB/s", RedisUtil::duration(decodeStart, decodeEnd), 
+             (double)conf->_objSize / RedisUtil::duration(decodeStart, decodeEnd) * 1000);
     delete conf;
 }

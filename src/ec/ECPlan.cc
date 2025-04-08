@@ -197,6 +197,12 @@ void ECPlan::send() {
             freeReplyObject(sendEcTasksReply);
         }
         redisFree(sendEcTasksCtx);
+
+        // free task buf
+        for (int i = 0; i < taskNum; i++) {
+            delete [] taskBufs[i].first;
+        }
+
     }
 }
 
