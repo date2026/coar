@@ -18,6 +18,7 @@
         "192.168.220.160",
         "9000"
     ],
+    "io_policy": "http",
     "pkt_size": 1048576,
     "obj_size": 256,
     "agent_worker_thread_num": 8,

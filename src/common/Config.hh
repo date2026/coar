@@ -32,7 +32,7 @@ public:
     int _agWorkerThreadNum;
     int _coorThreadNum;
     int _distThreadNum;
-
+    std::string _ioPolicy;
     std::unordered_map<std::string, ECPolicy*> _ecPolicyMap;    // ecid->ECPolicy
 
     std::vector<std::string> _fsParam;

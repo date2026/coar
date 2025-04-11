@@ -468,16 +468,16 @@ void ECWorker::execECTasks(AGCommand* agCmd) {
 
         goto SKIP;
     }
-
+    // TODO: modify time collection
     for (const auto task : tasks) {
         switch (task->_type) {
             case ECTaskType::SEND:
-                // sendTime += execSendECTask(filename, task, objBuffer);
-                sendTime += execSendECTaskByHttp(filename, task, objBuffer);
+                sendTime += execSendECTask(filename, task, objBuffer);
+                // sendTime += execSendECTaskByHttp(filename, task, objBuffer);
                 break;
             case ECTaskType::RECEIVE:
-                // receiveTime += execReceiveECTask(filename, task, objBuffer);
-                receiveTime += execReceiveECTaskByHttp(filename, task, objBuffer);
+                receiveTime += execReceiveECTask(filename, task, objBuffer);
+                // receiveTime += execReceiveECTaskByHttp(filename, task, objBuffer);
                 break;
             case ECTaskType::ENCODE:
                 encodeTime += execEncodeECTask(filename, task, objBuffer);
@@ -513,6 +513,16 @@ SKIP:
 
 
 double ECWorker::execSendECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
+    if (_conf->_ioPolicy == "redis") {
+        return execSendECTaskByRedis(filename, task, objBuffer);
+    } else if (_conf->_ioPolicy == "http") {
+        return execSendECTaskByHttp(filename, task, objBuffer);
+    } else {
+        assert(false && "undefined io policy");
+    }
+}
+
+double ECWorker::execSendECTaskByRedis(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
     const int nodeId = task->_nodeId;
     const int srcNodeId = task->_srcNodeId;
     const int dstNodeId = task->_dstNodeId;
@@ -553,6 +563,16 @@ double ECWorker::execSendECTask(const std::string& filename, const ECTask* task,
 }
 
 double ECWorker::execReceiveECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
+    if (_conf->_ioPolicy == "redis") {
+        return execReceiveECTaskByRedis(filename, task, objBuffer);
+    } else if (_conf->_ioPolicy == "http") {
+        return execReceiveECTaskByHttp(filename, task, objBuffer);
+    } else {
+        assert(false && "undefined io policy");
+    }
+}
+
+double ECWorker::execReceiveECTaskByRedis(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
     const int nodeId = task->_nodeId;
     const int dstNodeId = task->_dstNodeId;
     const int srcNodeId = task->_srcNodeId;
@@ -578,8 +598,7 @@ double ECWorker::execReceiveECTask(const std::string& filename, const ECTask* ta
     gettimeofday(&receiveEnd, NULL);
     LOG_INFO("execReceiveECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d, receive time: %f ms", 
              filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId, RedisUtil::duration(receiveStart, receiveEnd));
-    // return RedisUtil::duration(receiveStart, receiveEnd);
-    return receiveStart.tv_sec * 1000.0 + receiveStart.tv_usec / 1000.0;
+    return RedisUtil::duration(receiveStart, receiveEnd);
 }
 
 double ECWorker::execSendECTaskByHttp(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer) {
@@ -607,24 +626,25 @@ double ECWorker::execSendECTaskByHttp(const std::string& filename, const ECTask*
     }
 
     // 1. send time to receive node
-    gettimeofday(&sendStart, NULL);
     const std::string sendObjKey = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
                                       std::to_string(dstNodeId) + "_" + std::to_string(objId);
     redisContext* sendObjCtx = RedisUtil::createContext(_conf->_agent_ips[dstNodeId]);
     assert(sendObjCtx != NULL && "Failed to create redis context");
     
-    redisReply* sendStartTimeReply = (redisReply*)redisCommand(sendObjCtx, "rpush %s %b", 
-        sendObjKey.c_str(), &sendStart, sizeof(struct timeval));
-    assert(sendStartTimeReply != NULL && sendStartTimeReply->type == REDIS_REPLY_INTEGER);
-    freeReplyObject(sendStartTimeReply);
-
-    // 2. send data
+    // 2. send data and start time
     httplib::Server svr;
 
-    svr.Get("/data", [=](const httplib::Request& req, httplib::Response& res) {
+    svr.Get("/data", [=, &sendStart](const httplib::Request& req, httplib::Response& res) {
 		LOG_INFO("http send, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
                 filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
-		res.set_content(buf, bufSizeByte, "application/octet-stream");
+        char* sendBuf = new char [bufSizeByte + sizeof(timeval)];
+        // copy obj data
+        memcpy(sendBuf + sizeof(timeval), buf, bufSizeByte);
+        // copy send start time
+        gettimeofday(&sendStart, NULL);
+        memcpy(sendBuf, &sendStart, sizeof(timeval));
+		res.set_content(sendBuf, bufSizeByte + sizeof(timeval), "application/octet-stream");
+        delete [] sendBuf;
         LOG_INFO("http send done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
                 filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
 	});
@@ -655,37 +675,26 @@ double ECWorker::execReceiveECTaskByHttp(const std::string& filename, const ECTa
     const int objId = task->_objId;
     const int tmpObjId = task->_tmpObjId;
     struct timeval receiveStart, receiveEnd;
-    gettimeofday(&receiveStart, NULL);
     LOG_INFO("execReceiveECTask start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d", 
             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId);
     const std::string receiveObjKey = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
                                     std::to_string(dstNodeId) + "_" + std::to_string(objId);
     
-    // 1. receive start time from sender
-    redisContext* receiveObjStartTimeCtx = RedisUtil::createContext(_conf->_localIp);
-    assert(receiveObjStartTimeCtx != NULL && "Failed to create redis context");
-    redisReply* receiveTimeReply = (redisReply*)redisCommand(receiveObjStartTimeCtx, "blpop %s 0", receiveObjKey.c_str());
-    assert(receiveTimeReply != NULL && receiveTimeReply->type == REDIS_REPLY_ARRAY 
-            && receiveTimeReply->elements == 2);
-    memcpy(&receiveStart, receiveTimeReply->element[1]->str, sizeof(struct timeval));
-    freeReplyObject(receiveTimeReply);
-    redisFree(receiveObjStartTimeCtx);
-
-    // 2. receive data
-    
+    // 1. receive data and start time from sender 
     Client cli(RedisUtil::ip2Str(_conf->_agent_ips[srcNodeId]).c_str(), 8080);
     LOG_INFO("http receive from ip: %s, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
              RedisUtil::ip2Str(_conf->_agent_ips[srcNodeId]).c_str(), filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
     do {
-        LOG_INFO("try to srcNodeId: %d", srcNodeId);
         auto res = cli.Get("/data");
         if (res && res->status == 200) {
-            res->body.size() == _conf->_objSize * 1024 * 1024;
+            assert(res->body.size() == _conf->_objSize * 1024 * 1024 + sizeof(struct timeval)); // start time | data
             LOG_INFO("http receive done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
             int objSizeByte = _conf->_objSize * 1024 * 1024;
             char* obj = new char[objSizeByte];      // insert into objBuffer, free by objBuffer
-            memcpy(obj, res->body.data(), objSizeByte);
+            memcpy(&receiveStart, res->body.data(), sizeof(struct timeval));
+            LOG_INFO("http receive start time: %ld, %ld", receiveStart.tv_sec, receiveStart.tv_usec);
+            memcpy(obj, res->body.data() + sizeof(timeval), objSizeByte);
             objBuffer->insertObj(tmpObjId, obj);
             break;
         }

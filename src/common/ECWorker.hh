@@ -56,6 +56,8 @@ public:
     // exec ec task, called by execECTasks
     double execSendECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
     double execReceiveECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    double execSendECTaskByRedis(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    double execReceiveECTaskByRedis(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
     double execEncodeECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
     double execPersistECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
     double execSendECTaskByHttp(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);

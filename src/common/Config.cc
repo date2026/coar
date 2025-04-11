@@ -47,6 +47,7 @@ Config::Config(const std::string& file_path) {
     } else {
         assert(false && "invalid ec type");
     }
+    _ioPolicy = conf.at("io_policy").get<std::string>();
 
 }
 
