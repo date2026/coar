@@ -54,10 +54,14 @@ public:
     void readObj(AGCommand* agCmd);
 
     // exec ec task, called by execECTasks
-    void execSendECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
-    void execReceiveECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
-    void execEncodeECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
-    void execPersistECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    double execSendECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    double execReceiveECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    double execEncodeECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    double execPersistECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    double execSendECTaskByHttp(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+    double execReceiveECTaskByHttp(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
+
+
 };
 
 #endif

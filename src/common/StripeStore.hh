@@ -22,20 +22,7 @@ struct FileRecipe {
 class StripeStore {
 private:
     Config* _conf;
-
-    unordered_map<string, SSEntry*> _ssEntryMap;  
-    mutex _lockSSEntryMap;
-    
-
-    // backup
-    string _entryStorePath = "entryStore";
-    ofstream _entryStore;
-    mutex _lockEntryStore;
-
-    string _poolStorePath = "poolStore";
-    ofstream _poolStore;
-    mutex _lockPoolStore;
-    
+    const std::string _fileMetaPath = "../conf/fileMeta";
 	std::unordered_map<std::string, FileMeta*> _fileMetas;
 	int _curNodeId;
 	std::mutex _fileMetasMutex;
@@ -43,12 +30,11 @@ private:
 public:
     StripeStore(Config* conf);
 	~StripeStore();
-    bool existEntry(string filename);
-    void insertEntry(SSEntry* entry);
 
 	bool existFile(const std::string& filename);
 	std::vector<int> insertFile(const std::string& filename, int fileSize, int objNum);
 	FileMeta* getFileMeta(const std::string& filename);
+    void dump2File();
 };
 
 #endif

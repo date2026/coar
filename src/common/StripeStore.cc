@@ -6,15 +6,6 @@ StripeStore::StripeStore(Config* conf) {
 	_curNodeId = 0;
 }
 
-bool StripeStore::existEntry(string filename) {
-  unordered_map<string, SSEntry*>::iterator it = _ssEntryMap.find(filename);
-  return it == _ssEntryMap.end() ? false:true;
-}
-
-void StripeStore::insertEntry(SSEntry* entry) {
-
-}
-
 StripeStore::~StripeStore() {
 	_fileMetasMutex.lock();
 	for (auto it = _fileMetas.begin(); it != _fileMetas.end(); it++) {
@@ -60,4 +51,27 @@ FileMeta* StripeStore::getFileMeta(const std::string& filename) {
     fileMeta->lock();
     _fileMetasMutex.unlock();
     return fileMeta;
+}
+
+
+void StripeStore::dump2File() {
+    _fileMetasMutex.lock();
+    std::ofstream ofs(_fileMetaPath, std::ios::out | std::ios::trunc);
+    if (!ofs.is_open()) {
+        assert(false && "Failed to open fileMeta file");
+    }
+
+    for (const auto& it : _fileMetas) {
+        const std::string& filename = it.first;
+        const FileMeta* fileMeta = it.second;
+        ofs << filename << std::endl;
+        ofs << fileMeta->getFileSize() << std::endl;
+        ofs << fileMeta->getObjNum() << std::endl;
+        const std::vector<int>& objLocs = fileMeta->getObjLocs();
+        for (int i = 0; i < objLocs.size(); i++) {
+            ofs << objLocs[i] << " " << fileMeta->getRowId(objLocs[i]) << std::endl;
+        }
+    }
+
+    _fileMetasMutex.unlock();
 }
