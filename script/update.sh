@@ -17,6 +17,10 @@ do
 
 	# scp -r $DIR $USER@$host:/home/openec/
     # $DIR/build/HDFSDemo $DIR/build/ECTest $DIR/build/input_16MB_random
+    # scp /home/openec/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0/etc/hadoop/yarn-site.xml $USER@$host:/home/openec/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0/etc/hadoop/yarn-site.xml
+    # scp /home/openec/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0/etc/hadoop/mapred-site.xml $USER@$host:/home/openec/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0/etc/hadoop/mapred-site.xml
+    # scp -r $DIR/script/collect_sar.sh $DIR/script/parse_sar.py $USER@$host:$DIR/script/
+    ssh $USER@$host "rm -rf /home/openec/lmq_openec/build/repair.log"
     scp $DIR/script/tc.sh $USER@$host:$DIR/script/
 	scp $DIR/build/ECAgent $DIR/build/ECClient  $USER@$host:$DIR/build/
 	scp $DIR/conf/1.json $USER@$host:$DIR/conf/

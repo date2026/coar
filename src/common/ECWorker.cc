@@ -465,7 +465,10 @@ void ECWorker::execECTasks(AGCommand* agCmd) {
         // persist
         assert(tasks[5]->_type == ECTaskType::PERSIST);
         persistTime += execPersistECTask(filename, tasks[5], objBuffer);
-
+        std::ofstream logFile("repair.log", std::ios::app);
+        assert(logFile.is_open());
+        logFile << receiveTime << " " << encodeTime << " " << persistTime << std::endl;
+        logFile.close();
         goto SKIP;
     }
     // TODO: modify time collection
