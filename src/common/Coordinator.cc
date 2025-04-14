@@ -71,6 +71,7 @@ void Coordinator::registerFile(CoorCommand* coorCmd) {
 	agCmd->sendTo(clientIp);
 	delete agCmd;
 
+    _stripeStore->dump2File();
 }
 
 /**
@@ -146,7 +147,7 @@ void Coordinator::encode(CoorCommand* coorCmd) {
     freeReplyObject(encodeDoneReply);
     redisFree(encodeDoneCtx);
     LOG_INFO("Coordinator:encode done, filename: %s, sendIp: %s", filename.c_str(), RedisUtil::ip2Str(sendIp).c_str());
-    
+    _stripeStore->dump2File();
 }
 
 
@@ -195,7 +196,7 @@ void Coordinator::decode(CoorCommand* coorCmd) {
     freeReplyObject(decodeDoneReply);
     redisFree(decodeDoneCtx);
     LOG_INFO("Coordinator:decode done, filename: %s, sendIp: %s", filename.c_str(), RedisUtil::ip2Str(sendIp).c_str());
-    
+    _stripeStore->dump2File();
 }
 
 

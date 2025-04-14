@@ -34,6 +34,16 @@ FileMeta::FileMeta(const std::string& filename, int fileSize, int objNum, const 
 }
 
 
+FileMeta::FileMeta(const std::string& filename, int fileSize, int objNum, const std::vector<int>& objLocs, 
+                   const std::unordered_map<int, int>& objId2RowId) {
+    _fileSize = fileSize;
+    _objNum = objNum;
+    _objLocs = objLocs;
+    _filename = filename;
+    _objLocs = objLocs;
+    _objId2RowId = objId2RowId;    
+}
+
 FileMeta::~FileMeta() {}
 
 /**

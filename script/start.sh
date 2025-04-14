@@ -2,10 +2,9 @@
 
 NODE_NUM=9
 NODE_NAME=node
-DPDEDUP_DIR=/home/openec/lmq_openec
+DIR=/home/openec/lmq_openec
 
-
-./ECCoordinator &
+cd $DIR/build; ./ECCoordinator > ./ECCoordinator.log &
 for((i=1;i<=$NODE_NUM;i++))
 do
 {
@@ -16,7 +15,6 @@ do
         host=${NODE_NAME}$i
     fi
 
-    ssh $USER@$host "./ECAgent"
+    ssh $USER@$host "cd $DIR/build; bash ../script/start_agent.sh"
 } &
 done
-wait

@@ -22,10 +22,11 @@ struct FileRecipe {
 class StripeStore {
 private:
     Config* _conf;
-    const std::string _fileMetaPath = "../conf/fileMeta";
+    const std::string _fileMetaPath = "../build/fileMeta";
 	std::unordered_map<std::string, FileMeta*> _fileMetas;
 	int _curNodeId;
 	std::mutex _fileMetasMutex;
+    void initFromFile();
 
 public:
     StripeStore(Config* conf);
