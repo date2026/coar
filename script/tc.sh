@@ -9,8 +9,8 @@ sudo tc qdisc add dev ens33 root handle 1:0 htb default 2
 
 # sudo tc class add dev ens33 parent 1:0 classid 1:1 htb rate 1000Mbit ceil 1000Mbit burst 0
 # sudo tc class add dev ens33 parent 1:0 classid 1:1 htb rate 2000Mbit ceil 2000Mbit burst 0
-sudo tc class add dev ens33 parent 1:0 classid 1:1 htb rate 4000Mbit ceil 4000Mbit burst 0
-# sudo tc class add dev ens33 parent 1:0 classid 1:1 htb rate 8000Mbit ceil 8000Mbit burst 0
+# sudo tc class add dev ens33 parent 1:0 classid 1:1 htb rate 4000Mbit ceil 4000Mbit burst 0
+sudo tc class add dev ens33 parent 1:0 classid 1:1 htb rate 8000Mbit ceil 8000Mbit burst 0
 
 for((i=1;i<=$host_num;i++)); do
     host_ip=${host_address}${i}

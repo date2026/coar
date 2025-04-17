@@ -4,5 +4,5 @@ rm -rf $OUTPUT_DIR/*.sar
 
 for i in $(seq 1 1 80); do
     # collect_stats
-    sar -A 10 1 -p -o $OUTPUT_DIR/$i.sar
+    sar -A 2 1 -p -o $OUTPUT_DIR/$i.sar
 done

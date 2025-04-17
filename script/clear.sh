@@ -6,7 +6,7 @@ namenode_ip=192.168.220.160
 
 
 
-rm -rf $DIR/build/ECCoordinate.log $DIR/build/fileMeta
+rm -rf $DIR/build/ECCoordinator.log $DIR/build/fileMeta
 
 for((i=1;i<=$host_num;i++));
 do

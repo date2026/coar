@@ -180,5 +180,10 @@ void decode(const std::string& filename, const std::string& ecdagPath, std::vect
     gettimeofday(&decodeEnd, NULL);
     LOG_INFO("decode time: %f ms, decode throughput: %f MB/s", RedisUtil::duration(decodeStart, decodeEnd), 
              (double)conf->_objSize / RedisUtil::duration(decodeStart, decodeEnd) * 1000);
+    std::ofstream logFile("repair.log", std::ios::app);
+    assert(logFile.is_open());
+    logFile << RedisUtil::duration(decodeStart, decodeEnd) << " " << 
+               (double)conf->_objSize / RedisUtil::duration(decodeStart, decodeEnd) * 1000 << std::endl;
+    logFile.close();
     delete conf;
 }
