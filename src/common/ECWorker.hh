@@ -15,6 +15,7 @@
 #include "../protocol/AGCommand.hh"
 #include "../protocol/CoorCommand.hh"
 #include "../util/RedisUtil.hh"
+#include "../util/httplib.h"
 #include "../ec/ECPlan.hh"
 #include "../ec/RSPlan.hh"
 #include "ObjBuffer.hh"
@@ -40,7 +41,7 @@ public:
     void clientDecode(AGCommand* agCmd);
 	void receiveObjAndPersist(AGCommand* agCmd);
     void execECTasks(AGCommand* agCmd);
-
+    void execECTasksParallel(AGCommand* agCmd);
     // load data from redis, called by clientWrite
     void loadWorker(BlockingQueue<ECDataPacket*>* readQueue,
                     string keybase,
@@ -62,7 +63,13 @@ public:
     double execPersistECTask(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
     double execSendECTaskByHttp(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
     double execReceiveECTaskByHttp(const std::string& filename, const ECTask* task, ObjBuffer* objBuffer);
-
+    std::pair<timeval, timeval> execFetchECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer);
+    std::pair<timeval, timeval> execSendECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer, httplib::Server& svr);
+    std::pair<timeval, timeval> execReceiveECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer);
+    std::pair<timeval, timeval> execEncodeECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer);
+    std::pair<timeval, timeval> execPersistECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer);
+    void startHttpService(httplib::Server& svr, const std::vector<ECTask*>& tasks, std::thread& svrThd);
+    void printTime(const ConcurrentMap& timeMap, int taskNum, const std::vector<ECTask*>& tasks);
 
 };
 

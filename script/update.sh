@@ -15,9 +15,9 @@ do
 		ip=192.168.220.16$i
 	fi
 
-    scp -r ~/spark-2.4.0/conf/spark-env.sh $USER@$host:~/spark-2.4.0/conf/
+    # scp -r ~/spark-2.4.0/conf/spark-env.sh $USER@$host:~/spark-2.4.0/conf/
     # scp -r ~/spark-2.4.0/conf/spark-defaults.conf $USER@$host:~/spark-2.4.0/conf/
-    scp $DIR/script/collect_sar.sh $USER@$host:$DIR/script/
+    # scp $DIR/script/collect_sar.sh $USER@$host:$DIR/script/
     scp $DIR/script/tc.sh $USER@$host:$DIR/script/
 	scp $DIR/build/ECAgent $DIR/build/ECClient  $USER@$host:$DIR/build/
 	scp $DIR/conf/1.json $USER@$host:$DIR/conf/

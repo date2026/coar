@@ -13,7 +13,8 @@ enum class ECTaskType {
     SEND,
     RECEIVE,
     ENCODE,
-    PERSIST
+    PERSIST,
+    FETCH
 };
 
 static ECTaskType str2ECTaskType(const std::string& str) {
@@ -25,6 +26,8 @@ static ECTaskType str2ECTaskType(const std::string& str) {
         return ECTaskType::ENCODE;
     } else if (str == "PERSIST") {
         return ECTaskType::PERSIST;
+    } else if (str == "FETCH") {
+        return ECTaskType::FETCH;
     } else {
         assert(false && "undefined ECTaskType");
     }
@@ -40,6 +43,8 @@ static ECTaskType int2ECTaskType(int type) {
             return ECTaskType::ENCODE;
         case 3:
             return ECTaskType::PERSIST;
+        case 4:
+            return ECTaskType::FETCH;
         default:
             assert(false && "undefined ECTaskType");
     }
@@ -55,6 +60,8 @@ static int ECTaskType2int(ECTaskType type) {
             return 2;
         case ECTaskType::PERSIST:
             return 3;
+        case ECTaskType::FETCH:
+            return 4;
         default:
             assert(false && "undefined ECTaskType");
     }

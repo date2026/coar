@@ -40,7 +40,8 @@ void ECWorker::doProcess() {
             case 13: readObj(agCmd); break;
             case 14: clientEncode(agCmd); break;
             case 15: clientDecode(agCmd); break;
-            case 16: execECTasks(agCmd); break;
+            // case 16: execECTasks(agCmd); break;
+            case 16: execECTasksParallel(agCmd); break;
 			default:break;
 		}
 
@@ -770,4 +771,379 @@ double ECWorker::execPersistECTask(const std::string& filename, const ECTask* ta
     LOG_INFO("execPersistECTask done, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d, persist time: %f ms", 
             filename.c_str(), nodeId, objId, tmpObjId, RedisUtil::duration(persistStart, persistEnd));
     return RedisUtil::duration(persistStart, persistEnd);
+}
+
+/**
+ * exec ec tasks in parallel
+ */
+void ECWorker::execECTasksParallel(AGCommand* agCmd) {
+    const std::string filename = agCmd->getFilename();
+    int taskNum = agCmd->getEcTaskNum();
+    LOG_INFO("execECTasksParallel start, filename: %s, taskNum: %d", filename.c_str(), taskNum);
+
+    // store obj and tmpobj, objname->obj
+    ObjParallelBuffer* objBuffer = new ObjParallelBuffer();
+
+    // 1. get tasks from coordinator
+    const std::string receiveEcTasksKey = filename + "_ecTasks";
+    std::vector<ECTask*> tasks;
+
+    redisReply* receiveEcTasksReply;
+    
+
+    for (int i = 0; i < taskNum; i++) {
+        receiveEcTasksReply = (redisReply*)redisCommand(_localCtx, "blpop %s 0", receiveEcTasksKey.c_str());
+        assert(receiveEcTasksReply != NULL && receiveEcTasksReply->type == REDIS_REPLY_ARRAY 
+                && receiveEcTasksReply->elements == 2);
+        char* taskStr = receiveEcTasksReply->element[1]->str;
+        ECTask* task = new ECTask();
+        task->parse(taskStr);
+        LOG_INFO("ECWorker receive task, type: %d, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d, objIds: %s, encodePatternId: %d, coefs: %s", 
+                ECTaskType2int(task->_type), task->_nodeId, task->_srcNodeId, task->_dstNodeId, task->_objId, task->_tmpObjId, 
+                vec2String(task->_objIds).c_str(), task->_encodePatternId, vec2String(task->_coefs).c_str());
+        tasks.push_back(task);
+        freeReplyObject(receiveEcTasksReply);
+    }
+
+    // 2. exec tasks
+    LOG_INFO("ECWorker exec tasks, filename: %s, taskNum: %d", filename.c_str(), taskNum);
+    ConcurrentMap timeMap;
+    double sendTime = 0.0, receiveTime = 0.0, encodeTime = 0.0, persistTime = 0.0;
+    std::thread execThds[taskNum];
+    httplib::Server svr;
+    std::thread svrThd;             // thd for svr to listen
+    std::thread httpThd = std::thread([this, &svr, &tasks, &svrThd](){ startHttpService(svr, tasks, svrThd); });
+    for (int i = 0; i < taskNum; i++) {
+        switch (tasks[i]->_type) {
+            case ECTaskType::SEND:
+                execThds[i] = std::thread([=, &svr, &timeMap](){
+                    auto ret = execSendECTaskParallel(filename, tasks[i], objBuffer, svr);
+                    timeMap.setTime(i, ret);
+                });
+                break;
+            case ECTaskType::RECEIVE:
+                execThds[i] = std::thread([=, &timeMap](){
+                    auto ret = execReceiveECTaskParallel(filename, tasks[i], objBuffer);
+                    timeMap.setTime(i, ret);
+                });
+                break;
+            case ECTaskType::ENCODE:
+                execThds[i] = std::thread([=, &timeMap](){
+                    auto ret = execEncodeECTaskParallel(filename, tasks[i], objBuffer);
+                    timeMap.setTime(i, ret);
+                });
+                break;
+            case ECTaskType::PERSIST:
+                execThds[i] = std::thread([=, &timeMap](){
+                    auto ret = execPersistECTaskParallel(filename, tasks[i], objBuffer);
+                    timeMap.setTime(i, ret);
+                });
+                break;
+            case ECTaskType::FETCH:
+                execThds[i] = std::thread([=, &timeMap](){
+                    auto ret = execFetchECTaskParallel(filename, tasks[i], objBuffer);
+                    timeMap.setTime(i, ret);
+                });
+                break;
+            default:
+                assert(false && "undefined ECTaskType");
+        }
+    }
+    // 3. wait for tasks done, clean
+    for (int i = 0; i < taskNum; i++) {     // clean thds to do fetch, send, receive, encode, persist 
+        execThds[i].join();
+    }
+    if (svr.is_running()) {                 // if this node has send task, stop http svr, clean svrThd
+        svr.stop();
+        svrThd.join();
+    }
+    httpThd.join();
+
+
+    printTime(timeMap, taskNum, tasks);
+
+    // 3. send encode done to coordinator
+    const std::string execEcTasksDoneKey = filename + "_ecTasks_done";
+    redisReply* execEcTasksDoneReply = (redisReply*)redisCommand(_coorCtx, "rpush %s %b", 
+            execEcTasksDoneKey.c_str(), (char*)&taskNum, sizeof(int));
+    assert(execEcTasksDoneReply != NULL && execEcTasksDoneReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(execEcTasksDoneReply);
+    LOG_INFO("ECWorker send exec tasks done to coordinator, filename: %s, taskNum: %d", filename.c_str(), taskNum);
+
+    // 4. free tasks
+    for (auto task : tasks) {
+        delete task;
+    }
+
+    delete objBuffer;
+}
+
+std::pair<timeval, timeval> ECWorker::execFetchECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer) {
+    const int nodeId = task->_nodeId;
+    const int srcNodeId = task->_srcNodeId;
+    const int dstNodeId = task->_dstNodeId;
+    const int objId = task->_objId;
+    const int tmpObjId = task->_tmpObjId;
+    struct timeval fetchStart, fetchEnd;
+    gettimeofday(&fetchStart, NULL);
+    LOG_INFO("execFetchECTaskParallel start, filename: %s, nodeId: %d, odjId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
+    int bufSizeByte = _conf->_objSize * 1024 * 1024;
+    char* buf = new char [bufSizeByte];                            // free by objBuffer
+    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
+    _hdfsHandler->readFromHDFS(file, buf, bufSizeByte);
+    _hdfsHandler->closeFile(file);
+    objBuffer->insertObj(objId, buf);
+    LOG_INFO("execFetchECTaskParallel done, filename: %s, nodeId: %d, odjId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
+    gettimeofday(&fetchEnd, NULL);
+    return {fetchStart, fetchEnd};
+}
+
+
+/**
+ * read obj from objbuffer, send to requestor by http
+ */
+std::pair<timeval, timeval> ECWorker::execSendECTaskParallel(const std::string& filename, const ECTask* task, 
+                                                             ObjParallelBuffer* objBuffer, httplib::Server& svr) {
+    const int nodeId = task->_nodeId;
+    const int srcNodeId = task->_srcNodeId;
+    const int dstNodeId = task->_dstNodeId;
+    const int objId = task->_objId;
+    struct timeval sendStart, sendEnd;
+
+    LOG_INFO("execSendECTaskParallel start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
+            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
+    
+    // 1. read from objBuffer
+    int bufSizeByte = _conf->_objSize * 1024 * 1024;
+    char* buf = objBuffer->getObj(objId);                   // get from objBuffer, free by objBuffer
+    LOG_INFO("execSendECTaskParallel read obj from objBuffer done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
+             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
+    // 2. set svr for send data and start time 
+    // | sendStart | data |
+    const std::string key = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
+                                         std::to_string(dstNodeId) + "_" + std::to_string(objId);
+
+    svr.Get("/" + key, [=, &sendStart, &sendEnd](const httplib::Request& req, httplib::Response& res) {
+		LOG_INFO("http send, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
+                filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
+        char* sendBuf = new char [bufSizeByte + sizeof(timeval)];
+        memcpy(sendBuf + sizeof(timeval), buf, bufSizeByte);    // TODO: remove memcpy, send directly
+        gettimeofday(&sendStart, NULL);
+        memcpy(sendBuf, &sendStart, sizeof(timeval));
+		res.set_content(sendBuf, bufSizeByte + sizeof(timeval), "application/octet-stream");
+        delete [] sendBuf;
+        gettimeofday(&sendEnd, NULL);
+        LOG_INFO("http send done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
+                filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
+	});
+
+    // 3. send ready flag to httpServiceThd
+    redisContext* startHttpServiceCtx = RedisUtil::createContext(_conf->_localIp);
+    assert(startHttpServiceCtx != NULL);
+    redisReply* startHttpServiceReply = (redisReply*)redisCommand(startHttpServiceCtx, "rpush execSendECTaskParallel_start 0");
+    assert(startHttpServiceReply != NULL && startHttpServiceReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(startHttpServiceReply);
+
+
+    // 4. wait for receiver flag
+    redisContext* wait4ReceiverCtx = RedisUtil::createContext(_conf->_localIp);
+    assert(wait4ReceiverCtx != NULL);
+    redisReply* wait4ReceiverReply = (redisReply*)redisCommand(wait4ReceiverCtx, "blpop %s 0", key.c_str());
+    assert(wait4ReceiverReply != NULL && wait4ReceiverReply->type == REDIS_REPLY_ARRAY && wait4ReceiverReply->elements == 2);
+    freeReplyObject(wait4ReceiverReply);
+    redisFree(wait4ReceiverCtx);
+    LOG_INFO("execSendECTaskParallel receive flag from dstNodeId: %d, objId: %d", dstNodeId, objId);
+
+    LOG_INFO("execSendECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, time: %f ms", 
+            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, RedisUtil::duration(sendStart, sendEnd));
+    return {sendStart, sendEnd};
+}
+
+/**
+ * receive obj by http, insert to objBuffer
+ */
+std::pair<timeval, timeval> ECWorker::execReceiveECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer) {
+    const int nodeId = task->_nodeId;
+    const int dstNodeId = task->_dstNodeId;
+    const int srcNodeId = task->_srcNodeId;
+    const int objId = task->_objId;
+    const int tmpObjId = task->_tmpObjId;
+    struct timeval receiveStart, receiveEnd;
+    LOG_INFO("execReceiveECTaskParallel start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d", 
+            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId);
+    const std::string receiveObjKey = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
+                                    std::to_string(dstNodeId) + "_" + std::to_string(objId);
+    
+    // 1. receive data and start time from sender 
+    Client cli(RedisUtil::ip2Str(_conf->_agent_ips[srcNodeId]).c_str(), 8080);
+    
+    do {
+        auto res = cli.Get("/" + receiveObjKey);
+        if (res && res->status == 200) {
+            assert(res->body.size() == _conf->_objSize * 1024 * 1024 + sizeof(struct timeval)); // start time | data
+
+            int objSizeByte = _conf->_objSize * 1024 * 1024;
+            char* obj = new char[objSizeByte];      // insert into objBuffer, free by objBuffer
+            memcpy(&receiveStart, res->body.data(), sizeof(struct timeval));
+            gettimeofday(&receiveEnd, NULL);
+            memcpy(obj, res->body.data() + sizeof(timeval), objSizeByte);
+            objBuffer->insertObj(tmpObjId, obj);
+            break;
+        }
+    } while (true);
+
+    // 3. send reply to sender
+    redisContext* receiveObjCtx = RedisUtil::createContext(_conf->_agent_ips[srcNodeId]);
+    redisReply* receiveObjReply = (redisReply*)redisCommand(receiveObjCtx, "rpush %s 1", receiveObjKey.c_str());
+    assert(receiveObjReply != NULL && receiveObjReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(receiveObjReply);
+    redisFree(receiveObjCtx);
+    
+    // gettimeofday(&receiveEnd, NULL);
+    LOG_INFO("execReceiveECTaskParallel done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d, receive time: %f ms", 
+             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId, RedisUtil::duration(receiveStart, receiveEnd));
+    return {receiveStart, receiveEnd};
+}
+
+/**
+ * read buf from objBuffer, encode insert to objBuffer
+ */
+std::pair<timeval, timeval> ECWorker::execEncodeECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer) {
+    const int nodeId = task->_nodeId;
+    const std::vector<int> objIds = task->_objIds;
+    const int tmpObjId = task->_tmpObjId;
+    const std::vector<int> coefs = task->_coefs;
+    int objSizeByte = _conf->_objSize * 1024 * 1024;
+    timeval encodeStart, encodeEnd;
+    LOG_INFO("execEncodeECTaskParallel start, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, encodePatternId: %d, coefs: %s",
+             filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, task->_encodePatternId, vec2String(coefs).c_str()); 
+    
+    std::vector<const char*> objBufs;                   // get obj from objBuffer, free by objBuffer
+    for (int objId : objIds) {
+        const char* objBuf = objBuffer->getObj(objId);
+        objBufs.push_back(objBuf);
+    }
+    gettimeofday(&encodeStart, NULL);
+    char* encodeBuf = new char[objSizeByte];            // will insert into objBuffer, free by objBuffer
+    memset(encodeBuf, 0, objSizeByte); 
+    RSPlan::encode(objBufs, encodeBuf, coefs, _conf->_rsParam.w, objSizeByte);
+    objBuffer->insertObj(tmpObjId, encodeBuf);
+    gettimeofday(&encodeEnd, NULL);
+    LOG_INFO("execEncodeECTaskParallel done, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, encodePatternId: %d, coefs: %s, encode time: %f ms",
+             filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, 
+             task->_encodePatternId, vec2String(coefs).c_str(), RedisUtil::duration(encodeStart, encodeEnd)); 
+    return {encodeStart, encodeEnd};
+}
+
+
+std::pair<timeval, timeval> ECWorker::execPersistECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer) {
+    const int nodeId = task->_nodeId;
+    const int objId = task->_objId;
+    const int tmpObjId = task->_tmpObjId;
+    struct timeval persistStart, persistEnd;
+    LOG_INFO("execPersistECTaskParallel start, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
+    
+    char* objBuf = objBuffer->getObj(tmpObjId);         // free by objBuffer
+    gettimeofday(&persistStart, NULL);
+
+    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    int objSizeByte = _conf->_objSize * 1024 * 1024;
+
+    hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::WRITE);
+    _hdfsHandler->write2HDFS(file, objBuf, objSizeByte);
+    _hdfsHandler->closeFile(file);
+    gettimeofday(&persistEnd, NULL);
+    LOG_INFO("execPersistECTaskParallel done, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d, persist time: %f ms", 
+            filename.c_str(), nodeId, objId, tmpObjId, RedisUtil::duration(persistStart, persistEnd));
+    return {persistStart, persistEnd};
+}
+
+
+/**
+ * 1. wait for sendECTask threads get ready done
+ * 2. start http listen
+ */
+void ECWorker::startHttpService(httplib::Server& svr, const std::vector<ECTask*>& tasks, std::thread& svrThd) {
+    int sendECTaskNum = 0;
+    for (const auto& task : tasks) {
+        if (task->_type == ECTaskType::SEND) {
+            sendECTaskNum++;
+        }
+    }
+    if (sendECTaskNum == 0) {
+        return;
+    }
+    redisContext* startHttpServiceCtx = RedisUtil::createContext(_conf->_localIp);
+    assert(startHttpServiceCtx != NULL);
+    for (int i = 0; i < sendECTaskNum; i++) {
+        redisReply* startHttpServiceReply = (redisReply*)redisCommand(startHttpServiceCtx, "blpop %s 0", "execSendECTaskParallel_start");
+		assert(startHttpServiceReply != NULL && startHttpServiceReply -> type == REDIS_REPLY_ARRAY 
+               && startHttpServiceReply -> elements == 2);
+        freeReplyObject(startHttpServiceReply);
+    }
+
+    svrThd = std::thread([&](){
+		svr.listen("0.0.0.0", 8080);
+    });
+
+    redisFree(startHttpServiceCtx);
+}
+
+
+void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::vector<ECTask*>& tasks) {
+    double fetchStartTime, sendStartTime, receiveStartTime, encodeStartTime, persistStartTime;
+    double fetchEndTime, sendEndTime, receiveEndTime, encodeEndTime, persistEndTime;
+    fetchStartTime = sendStartTime = receiveStartTime = encodeStartTime = persistStartTime = std::numeric_limits<double>::max();
+    fetchEndTime = sendEndTime = receiveEndTime = encodeEndTime = persistEndTime = std::numeric_limits<double>::min();
+    
+    for (int i = 0; i < taskNum; i++) {
+        switch (tasks[i]->_type) {
+            case ECTaskType::FETCH:
+                fetchStartTime = std::min(fetchStartTime, timeMap._timeMap.at(i).first.tv_sec * 1000.0 
+                                          + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
+                fetchEndTime = std::max(fetchEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
+                                        + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                break;
+            case ECTaskType::SEND:
+                sendStartTime = std::min(sendStartTime, timeMap._timeMap.at(i).first.tv_sec * 1000.0 
+                                         + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
+                sendEndTime = std::max(sendEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
+                                        + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                break;
+            case ECTaskType::RECEIVE:
+                receiveStartTime = std::min(receiveStartTime, timeMap._timeMap.at(i).first.tv_sec * 1000.0 
+                                            + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
+                receiveEndTime = std::max(receiveEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
+                                          + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                break;
+            case ECTaskType::ENCODE:
+                encodeStartTime = std::min(encodeStartTime, timeMap._timeMap.at(i).first.tv_sec * 1000.0 
+                                           + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
+                encodeEndTime = std::max(encodeEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
+                                         + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                break;
+            case ECTaskType::PERSIST:
+                persistStartTime = std::min(persistStartTime, timeMap._timeMap.at(i).first.tv_sec * 1000.0 
+                                            + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
+                persistEndTime = std::max(persistEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
+                                          + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                break;
+        }
+    }
+
+    double fetchTime = fetchStartTime != std::numeric_limits<double>::max() ? fetchEndTime - fetchStartTime : -1.0;
+    double sendTime = sendStartTime != std::numeric_limits<double>::max() ? sendEndTime - sendStartTime : -1.0;
+    double receiveTime = receiveStartTime != std::numeric_limits<double>::max() ? receiveEndTime - receiveStartTime : -1.0;
+    double encodeTime = encodeStartTime != std::numeric_limits<double>::max() ? encodeEndTime - encodeStartTime : -1.0;
+    double persistTime = persistStartTime != std::numeric_limits<double>::max() ? persistEndTime - persistStartTime : -1.0;
+
+    std::ofstream logFile("repair.log", std::ios::app);
+    assert(logFile.is_open());
+    logFile << receiveTime << " " << encodeTime << " " << persistTime << std::endl;
+    logFile.close();
+
+
+    LOG_INFO("fetch time: %f, send time: %f, receive time: %f, encode time: %f, persist time: %f", 
+             fetchTime, sendTime, receiveTime, encodeTime, persistTime);
 }

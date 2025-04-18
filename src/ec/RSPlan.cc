@@ -110,6 +110,12 @@ void RSPlan::setRSTask(const std::vector<std::string>& taskInfo, ECTask* task) {
             rowId = std::stoi(taskInfo[3]);
             _fileMeta->setRowId(task->_objId, rowId);       // set rowId of this obj, used in decode to know which row this obj is
             break;
+        case ECTaskType::FETCH:
+            assert(taskInfo.size() == 3 && "FETCH task info size error");
+            task->_nodeId = std::stoi(taskInfo[0]);
+            task->_objId = std::stoi(taskInfo[1]);
+            task->_tmpObjId = std::stoi(taskInfo[2]);
+            break;
         default:
             assert(false && "undefined ECTaskType");
     }

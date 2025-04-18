@@ -74,6 +74,18 @@ std::pair<char*, int> ECTask::dump() const {
             memcpy(buf + offset, (char*)&_objId, sizeof(int));
             offset += sizeof(int);
             break;
+        case ECTaskType::FETCH:
+            len = sizeof(int) * 4;
+            buf = new char [len];
+            memcpy(buf + offset, (char*)&tmpType, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_nodeId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_tmpObjId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_objId, sizeof(int));
+            offset += sizeof(int);
+            break;
         default:
             assert(false && "undefined ECTaskType");
     }
@@ -132,6 +144,14 @@ void ECTask::parse(const char* buf) {
             }           
             break;
         case ECTaskType::PERSIST:
+            memcpy((char*)&_nodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_tmpObjId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_objId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::FETCH:
             memcpy((char*)&_nodeId, buf + offset, sizeof(int));
             offset += sizeof(int);
             memcpy((char*)&_tmpObjId, buf + offset, sizeof(int));
