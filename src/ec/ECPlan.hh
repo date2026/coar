@@ -14,7 +14,8 @@ enum class ECTaskType {
     RECEIVE,
     ENCODE,
     PERSIST,
-    FETCH
+    FETCH,
+    ENCODE_PARTIAL
 };
 
 static ECTaskType str2ECTaskType(const std::string& str) {
@@ -28,6 +29,8 @@ static ECTaskType str2ECTaskType(const std::string& str) {
         return ECTaskType::PERSIST;
     } else if (str == "FETCH") {
         return ECTaskType::FETCH;
+    } else if (str == "ENCODE_PARTIAL") {
+        return ECTaskType::ENCODE_PARTIAL;
     } else {
         assert(false && "undefined ECTaskType");
     }
@@ -45,6 +48,8 @@ static ECTaskType int2ECTaskType(int type) {
             return ECTaskType::PERSIST;
         case 4:
             return ECTaskType::FETCH;
+        case 5: 
+            return ECTaskType::ENCODE_PARTIAL;
         default:
             assert(false && "undefined ECTaskType");
     }
@@ -62,6 +67,8 @@ static int ECTaskType2int(ECTaskType type) {
             return 3;
         case ECTaskType::FETCH:
             return 4;
+        case ECTaskType::ENCODE_PARTIAL:
+            return 5;
         default:
             assert(false && "undefined ECTaskType");
     }
@@ -96,6 +103,8 @@ public:
     
     // for PERSIST
 
+    // for ENCODE_PARTIAL
+    int _objNum;
 };
 
 

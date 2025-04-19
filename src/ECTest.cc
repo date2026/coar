@@ -21,6 +21,8 @@ int main() {
     for (int i = 0; i < 1; i++) {
         coding_ptrs[i] = new char [objSizeByte];
     }
+
+    // generate encode matrix
     int* matrix = new int [n * k];
     memset(matrix, 0, n * k * sizeof(int));
     for (int i = 0; i < k; i++) {
@@ -39,109 +41,85 @@ int main() {
     // matrix: m * k
 
 
-    // write data file
-    for (int i = 0; i < k; i++) {
-        std::string dataFileName = filePath + "_data_" + std::to_string(i);
-        FILE* dataFile = fopen(dataFileName.c_str(), "wb+");
-        assert(dataFile != NULL && "Failed to open file");
-        fwrite(data_ptrs[i], objSizeByte, 1, dataFile);
-        fclose(dataFile);
-    }
-
     // encode 0
     int* encodeMatrix = matrix + k * k;
-    jerasure_matrix_encode(k, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
-    printf("print encode matrix\n");
-    for (int i = 0; i < k; i++) {
-        printf("%d ", encodeMatrix[i]);
-    }
-    printf("\n");
-    std::string codingFileName = filePath + "_encode_0";
-    FILE* codingFile = fopen(codingFileName.c_str(), "wb+");
-    assert(codingFile != NULL && "Failed to open file");
-    fwrite(coding_ptrs[0], objSizeByte, 1, codingFile);
-    fclose(codingFile);
-    
-    // encode 1
-    // encodeMatrix = matrix + (k + 1) * k;
     // jerasure_matrix_encode(k, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
     // printf("print encode matrix\n");
     // for (int i = 0; i < k; i++) {
     //     printf("%d ", encodeMatrix[i]);
     // }
     // printf("\n");
-    // codingFileName = filePath + "_encode_1";
-    // codingFile = fopen(codingFileName.c_str(), "wb+");
-    // assert(codingFile != NULL && "Failed to open file");
-    // fwrite(coding_ptrs[0], objSizeByte, 1, codingFile);
-    // fclose(codingFile);
+
+    
+    // encode 1
+    encodeMatrix = matrix + (k + 1) * k;
+    jerasure_matrix_encode(k, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
+    printf("print encode matrix\n");
+    for (int i = 0; i < k; i++) {
+        printf("%d ", encodeMatrix[i]);
+    }
+    printf("\n");
     
     // ================================================================
+    // decode for k - 1 erasure
     int* selectMatrix = new int [k * k];
+    memcpy(selectMatrix + 0 * k, matrix + 0 * k, k * sizeof(int));
+    memcpy(selectMatrix + 1 * k, matrix + 2 * k, k * sizeof(int));
+    memcpy(selectMatrix + 2 * k, matrix + 3 * k, k * sizeof(int));
+    memcpy(selectMatrix + 3 * k, matrix + 5 * k, k * sizeof(int));
+
     // copy 0 ... k - 2
-    for (int i = 0; i < k - 1; i++) {
-        memcpy(selectMatrix + i * k, matrix + i * k, k * sizeof(int));
-    }
+    // for (int i = 0; i < k - 1; i++) {
+    //     memcpy(selectMatrix + i * k, matrix + i * k, k * sizeof(int));
+    // }
     // copy k
-    memcpy(selectMatrix + (k - 1) * k, matrix + k * k, k * sizeof(int));
-    printf("print select matrix\n");
-    for (int i = 0; i < k; i++) {
-        for (int j = 0; j < k; j++) {
-            printf("%d ", selectMatrix[i * k + j]);
-        }
-        printf("\n");
-    }
+    // memcpy(selectMatrix + (k - 1) * k, matrix + k * k, k * sizeof(int));
+    // memcpy(selectMatrix + (k - 1) * k, matrix + (k + 1) * k, k * sizeof(int));
 
     int* invertMatrix = new int [k * k];
     jerasure_invert_matrix(selectMatrix, invertMatrix, k, w);
     // copy k - 1
     int* selectVector = new int [k];
-    memcpy(selectVector, matrix + (k - 1) * k, k * sizeof(int));
-    printf("print selectVector\n");
-    for (int i = 0; i < k; i++) {
-        printf("%d ", selectVector[i]);
-    }
-    printf("\n");
+    memcpy(selectVector, matrix + 1 * k, k * sizeof(int));
+
+    // memcpy(selectVector, matrix + (k - 1) * k, k * sizeof(int));
+
     int* coefVector = jerasure_matrix_multiply(selectVector, invertMatrix, 1, k, k, k, w);
     printf("print coefVector\n");
     for (int i = 0; i < k; i++) {
         printf("%d ", coefVector[i]);
     }
     printf("\n");
-    char** data_ptrs_4_decode = new char* [k];
-    // copy data
-    for (int i = 0; i < k - 1; i++) {
-        data_ptrs_4_decode[i] = new char [objSizeByte];
-        memcpy(data_ptrs_4_decode[i], data_ptrs[i], objSizeByte);
-    }
-    data_ptrs_4_decode[k - 1] = new char [objSizeByte];
-    memcpy(data_ptrs_4_decode[k - 1], coding_ptrs[0], objSizeByte);
-
+   
+    // data needed to decode
+    char* data_ptrs_4_decode[] = {data_ptrs[0], data_ptrs[2], data_ptrs[3], coding_ptrs[0]};
+    // decode result
     char** coding_ptrs_4_decode = new char* [1];
     coding_ptrs_4_decode[0] = new char [objSizeByte];
 
-    // decode
-    jerasure_matrix_encode(k, 1, w, coefVector, data_ptrs_4_decode, coding_ptrs_4_decode, objSizeByte);
-    codingFileName = filePath + "_decode";
-    codingFile = fopen(codingFileName.c_str(), "wb+");
-    assert(codingFile != NULL && "Failed to open file");
-    fwrite(coding_ptrs_4_decode[0], objSizeByte, 1, codingFile);
-    fclose(codingFile);
+    // immediate result
+    char* coding_ptrs_tmp_0 = new char [objSizeByte];
+    char* coding_ptrs_tmp_1 = new char [objSizeByte];
 
- 
+    int matrix_tmp_0[] = {142, 2};
+    int matrix_tmp_1[] = {4, 142};
+    int matrix_tmp_2[] = {1, 1};
 
-
-    // clear
-    for (int i = 0; i < k; i++) {
-        delete [] data_ptrs[i];
+    jerasure_matrix_encode(2, 1, w, matrix_tmp_0, data_ptrs_4_decode, coding_ptrs_4_decode, objSizeByte);
+    memcpy(coding_ptrs_tmp_0, coding_ptrs_4_decode[0], objSizeByte);
+    std::cout << "decode 0" << std::endl;
+    jerasure_matrix_encode(2, 1, w, matrix_tmp_1, data_ptrs_4_decode + 2, coding_ptrs_4_decode, objSizeByte);
+    memcpy(coding_ptrs_tmp_1, coding_ptrs_4_decode[0], objSizeByte);
+    std::cout << "decode 1" << std::endl;
+    char* coding_ptrs_4_decode_tmp[] = {coding_ptrs_tmp_0, coding_ptrs_tmp_1};
+    jerasure_matrix_encode(2, 1, w, matrix_tmp_2, coding_ptrs_4_decode_tmp, coding_ptrs_4_decode, objSizeByte);
+    std::cout << "decode 2" << std::endl;
+    // compare
+    for (int i = 0; i < objSizeByte; i++) {
+        if (coding_ptrs_4_decode[0][i] != data_ptrs[1][i]) {
+            printf("conv decode error\n");
+            break;
+        }
     }
-    delete [] data_ptrs;
-    for (int i = 0; i < m; i++) {
-        delete [] coding_ptrs[i];
-    }
-    delete [] coding_ptrs;
-    delete [] matrix;
-
-
-
+    return 0;
 }

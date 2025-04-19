@@ -62,6 +62,27 @@ std::pair<char*, int> ECTask::dump() const {
                 offset += sizeof(int);
             }
             break;
+        case ECTaskType::ENCODE_PARTIAL:
+            len = sizeof(int) * (4 + _objIds.size() + _coefs.size());
+            buf = new char[len];
+            memcpy(buf + offset, (char*)&tmpType, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_nodeId, sizeof(int));
+            offset += sizeof(int);
+            objNum = _objIds.size();
+            memcpy(buf + offset, (char*)&objNum, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                memcpy(buf + offset, (char*)&_objIds[i], sizeof(int));
+                offset += sizeof(int);
+            }
+            memcpy(buf + offset, (char*)&_tmpObjId, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                memcpy(buf + offset, (char*)&_coefs[i], sizeof(int));
+                offset += sizeof(int);
+            }
+            break;
         case ECTaskType::PERSIST:
             len = sizeof(int) * 4;
             buf = new char [len];
@@ -135,6 +156,26 @@ void ECTask::parse(const char* buf) {
             memcpy((char*)&_tmpObjId, buf + offset, sizeof(int));
             offset += sizeof(int);
             memcpy((char*)&_encodePatternId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                int coef;
+                memcpy((char*)&coef, buf + offset, sizeof(int));
+                _coefs.push_back(coef);
+                offset += sizeof(int);
+            }           
+            break;
+        case ECTaskType::ENCODE_PARTIAL:
+            memcpy((char*)&_nodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&objNum, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                int objId;
+                memcpy((char*)&objId, buf + offset, sizeof(int));
+                _objIds.push_back(objId);
+                offset += sizeof(int);
+            }
+            memcpy((char*)&_tmpObjId, buf + offset, sizeof(int));
             offset += sizeof(int);
             for (int i = 0; i < objNum; i++) {
                 int coef;

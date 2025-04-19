@@ -1,12 +1,14 @@
 #pragma once
 
 #include "../inc/include.hh"
-#include "../ec/ECPolicy.hh"
 
 
 
 enum class ECType {
     RS, LRC, MSR
+};
+enum class ECPolicy {
+    CONV, PPR, Pipe
 };
 struct RSParam {
     int n;
@@ -29,15 +31,16 @@ public:
 
     int _pktSize;           // Byte
     int _objSize;           // MB
+    int _sliceSize;         // MB
     int _agWorkerThreadNum;
     int _coorThreadNum;
     int _distThreadNum;
     std::string _ioPolicy;
-    std::unordered_map<std::string, ECPolicy*> _ecPolicyMap;    // ecid->ECPolicy
 
     std::vector<std::string> _fsParam;
 
     ECType _ecType;
+    ECPolicy _ecPolicy;
     RSParam _rsParam;
 
     std::unordered_map<std::string, std::string> _offlineECMap = {{"rs_9_6_pool", "rs_9_6"}};

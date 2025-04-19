@@ -28,6 +28,7 @@ Config::Config(const std::string& file_path) {
     _fsParam = conf.at("fs_param").get<std::vector<std::string>>();
     _pktSize = conf.at("pkt_size").get<int>();
     _objSize = conf.at("obj_size").get<int>();
+    _sliceSize = conf.at("slice_size").get<int>();
     _agWorkerThreadNum = conf.at("agent_worker_thread_num").get<int>();
     _coorThreadNum = conf.at("coordinator_thread_num").get<int>();
 
@@ -47,15 +48,23 @@ Config::Config(const std::string& file_path) {
     } else {
         assert(false && "invalid ec type");
     }
+    std::string ecPolicy = ecParam.at("ec_policy").get<std::string>();
+    if (ecPolicy == "CONV") {
+        _ecPolicy = ECPolicy::CONV;
+    } else if (ecPolicy == "PPR") {
+        _ecPolicy = ECPolicy::PPR;
+    } else if (ecPolicy == "Pipe") {
+        _ecPolicy = ECPolicy::Pipe;
+    } else {
+        assert(false && "invalid ec policy");
+    }
     _ioPolicy = conf.at("io_policy").get<std::string>();
 
 }
 
 
 Config::~Config() {
-    for (auto& item : _ecPolicyMap) {
-        delete item.second;
-    }
+    
 }
 
 

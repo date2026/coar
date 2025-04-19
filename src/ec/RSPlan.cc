@@ -66,6 +66,7 @@ void RSPlan::setRSTasks() {
  * SEND [nodeId/srcNodeId] [dstNodeId] [objId]
  * RECEIVE [nodeId/dstNodeId][srcNodeId] [objId] [tmpObjId]
  * ENCODE [nodeId] [objId...] [tmpObjId] [encodePatternId]
+ * ENCODE_PARTIAL [nodeId] [objNum] [objIds...] [tmpObjId] [coefs...]
  * PERSIST [nodeId] [tmpObjId] [objId]
  */
 void RSPlan::setRSTask(const std::vector<std::string>& taskInfo, ECTask* task) {
@@ -101,6 +102,19 @@ void RSPlan::setRSTask(const std::vector<std::string>& taskInfo, ECTask* task) {
             assert(task->_encodePatternId >= 0 && task->_encodePatternId < _k);
             task->_coefs = _encodeMatrix[_k + task->_encodePatternId];
             assert(task->_coefs.size() == _k && "encode pattern size error");
+            break;
+        case ECTaskType::ENCODE_PARTIAL:
+            assert(taskInfo.size() >= 5 && "ENCODE_PARTIAL task info size error");
+            task->_nodeId = std::stoi(taskInfo[0]);
+            task->_objNum = std::stoi(taskInfo[1]);
+            assert(taskInfo.size() == 3 + task->_objNum * 2 && "ENCODE_PARTIAL task info size error");
+            for (int i = 0; i < task->_objNum; i++) {
+                task->_objIds.push_back(std::stoi(taskInfo[2 + i]));
+            }
+            task->_tmpObjId = std::stoi(taskInfo[2 + task->_objNum]);
+            for (int i = 0; i < task->_objNum; i++) {
+                task->_coefs.push_back(std::stoi(taskInfo[3 + task->_objNum + i]));
+            }
             break;
         case ECTaskType::PERSIST:
             assert(taskInfo.size() == 4 && "PERSIST task info size error");
@@ -257,10 +271,12 @@ void RSPlan::encode(std::vector<const char*> data, char* parity,
     for (int j = 0; j < k; j++) {
         matrix[j] = encodeMatrix[j];
     }
-
+    timeval start, end;
+    gettimeofday(&start, NULL);
     jerasure_matrix_encode(k, m, w, matrix, data_ptrs, coding_ptrs, objSizeByte);
+    gettimeofday(&end, NULL);
     memcpy(parity, coding_ptrs[0], objSizeByte);
-
+    LOG_INFO("jerasure_matrix_encode time: %f ms", RedisUtil::duration(start, end));
     // clear
     for (int i = 0; i < k; i++) {
         free(data_ptrs[i]);
