@@ -1,0 +1,58 @@
+from redis import Redis
+import json
+
+
+
+# collect node stats for generate ecdag 
+def CollectStats(cpu_flag, mem_flag, disk_flag, net_flag):
+    with open("/home/openec/lmq_openec/conf/1.json") as f:
+        conf = json.load(f)
+    local_ip = conf["local_ip"]
+    agent_ips = conf["agent_ips"]
+    agent_num = conf["agent_num"]
+    ret = {"cpu": [], "upload_bandwidth": [], "download_bandwidth": [], "mem": [], "disk": []}
+    for i in range(agent_num):
+        agent_ip = agent_ips[i]
+        agent_connect = Redis(host=agent_ip, port=6379, db=0)
+        if cpu_flag:
+            cpu_usage = agent_connect.get('cpu_' + agent_ip)
+            ret["cpu"].append(int(cpu_usage))
+        if net_flag:
+            upload_bandwidth = agent_connect.get('recovery_up_' + agent_ip)
+            download_bandwidth = agent_connect.get('recovery_dw_' + agent_ip)
+            ret["upload_bandwidth"].append(float(upload_bandwidth))
+            ret["download_bandwidth"].append(float(download_bandwidth))
+
+    return ret
+
+# collect node stats for generate ecdag 
+def CollectJobs():
+    with open("/home/openec/lmq_openec/conf/1.json") as f:
+        conf = json.load(f)
+    agent_ips = conf["agent_ips"]
+    coor_connect = Redis(host="localhost", port=6379, db=0)
+    download_tasks = []
+    upload_tasks = []
+    for i in range(len(agent_ips)):
+        agent_ip = agent_ips[i]        
+        job_cnt = coor_connect.get('download_tasks_' + agent_ip)
+        if job_cnt is None:
+            download_tasks.append(0)
+        else:
+            download_tasks.append(int(job_cnt))
+        job_cnt = coor_connect.get('upload_tasks_' + agent_ip)
+        if job_cnt is None:
+            upload_tasks.append(0)
+        else:
+            upload_tasks.append(int(job_cnt))
+    return download_tasks, upload_tasks
+
+def UpdateTasks(download_tasks, upload_tasks):
+    with open("/home/openec/lmq_openec/conf/1.json") as f:
+        conf = json.load(f)
+    agent_ips = conf["agent_ips"]
+    coor_connect = Redis(host="localhost", port=6379, db=0)
+    for i in range(len(agent_ips)):
+        agent_ip = agent_ips[i]        
+        coor_connect.set('download_tasks_' + agent_ip, download_tasks[i - 1])
+        coor_connect.set('upload_tasks_' + agent_ip, upload_tasks[i - 1])

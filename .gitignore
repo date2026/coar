@@ -1,3 +1,4 @@
 build
 .vscode
 script/sysstat
+__pycache__

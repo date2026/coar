@@ -75,9 +75,22 @@ int main() {
     // copy k
     // memcpy(selectMatrix + (k - 1) * k, matrix + k * k, k * sizeof(int));
     // memcpy(selectMatrix + (k - 1) * k, matrix + (k + 1) * k, k * sizeof(int));
-
+    printf("print select matrix\n");
+    for (int i = 0; i < k; i++) {
+        for (int j = 0; j < k; j++) {
+            printf("%d ", selectMatrix[i * k + j]);
+        }
+        printf("\n");
+    }
     int* invertMatrix = new int [k * k];
     jerasure_invert_matrix(selectMatrix, invertMatrix, k, w);
+    printf("print invert matrix\n");
+    for (int i = 0; i < k; i++) {
+        for (int j = 0; j < k; j++) {
+            printf("%d ", invertMatrix[i * k + j]);
+        }
+        printf("\n");
+    }
     // copy k - 1
     int* selectVector = new int [k];
     memcpy(selectVector, matrix + 1 * k, k * sizeof(int));

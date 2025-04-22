@@ -163,6 +163,18 @@ void RSPlan::generateMatrix() {
         printf("\n");
     }
 
+    // dump ec info to file
+    std::string ecInfoFile = "/home/openec/lmq_openec/build/ec_info";
+    std::ofstream ofs(ecInfoFile, std::ios::out | std::ios::trunc);
+    assert(ofs.is_open() && "Failed to open ec info file");
+    ofs << _n << " " << _k << std::endl;
+    for (int i = 0; i < _n; i++) {
+        for (int j = 0; j < _k; j++) {
+            ofs << _encodeMatrix[i][j] << " ";
+        }
+        ofs << std::endl;
+    }
+    ofs.close();
 }
 
 void RSPlan::generateDecodeMatrix(const std::vector<int>& survivedObjIds, int failedObjId) {
