@@ -19,15 +19,15 @@
     ],
     "io_policy": "http",
     "pkt_size": 1048576,
-    "obj_size": 256,
+    "obj_size": 170,
     "slice_size": 1,
     "agent_worker_thread_num": 8,
     "coordinator_thread_num": 8,
     "ec_param": {
         "ec_type": "RS",
         "ec_policy": "CONV",
-        "k": 4,
-        "n": 6,
+        "k": 6,
+        "n": 9,
         "w": 8
     }
 }

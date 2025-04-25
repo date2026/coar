@@ -81,6 +81,7 @@ def get_decode_vector(matrix, survivors, target_index, k, w):
 
 
 def GetCoefVector(matrix, all_node_ids, row_ids, select_node_ids, target_node_id, k, w):    
+    assert len(matrix[0]) == k 
     survivor_index = []
     for node_id in select_node_ids:
         row_id = row_ids[all_node_ids.index(node_id)]

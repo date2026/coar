@@ -54,5 +54,22 @@ def UpdateTasks(download_tasks, upload_tasks):
     coor_connect = Redis(host="localhost", port=6379, db=0)
     for i in range(len(agent_ips)):
         agent_ip = agent_ips[i]        
-        coor_connect.set('download_tasks_' + agent_ip, download_tasks[i - 1])
-        coor_connect.set('upload_tasks_' + agent_ip, upload_tasks[i - 1])
+        coor_connect.set('download_tasks_' + agent_ip, download_tasks[i])
+        coor_connect.set('upload_tasks_' + agent_ip, upload_tasks[i])
+
+def ReStoreTasks(download_selector, upload_selector):
+    print(f"download_selector: {download_selector}")
+    print(f"upload_selector: {upload_selector}")
+    with open("/home/openec/lmq_openec/conf/1.json") as f:
+        conf = json.load(f)
+    agent_ips = conf["agent_ips"]
+    coor_connect = Redis(host="localhost", port=6379, db=0)
+    for i in range(len(agent_ips)):
+        node_id = i + 1
+        agent_ip = agent_ips[i]
+        val = download_selector.get(node_id, 0)
+        if val != 0:
+            coor_connect.decrby('download_tasks_' + agent_ip, val)
+        val = upload_selector.get(node_id, 0)
+        if val != 0:
+            coor_connect.decrby('upload_tasks_' + agent_ip, val)

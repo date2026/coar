@@ -37,17 +37,7 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
 
     old_download_selector = download_selector.copy()
     old_upload_selector = upload_selector.copy()
-    # download_selector = {
-    #     2: 2,
-    #     4: 2
-    # }
-    # upload_selector = {
-    #     1: 1,
-    #     3: 1,
-    #     4: 1,
-    #     6: 1
-    # }
-    # nd = 2
+
     node_id_2_coefs = rs.GetCoefVector(matrix, all_node_ids, row_ids, upload_selector.keys(), failed_node_id, k, 8)
     logging.info(f"node_id_2_coefs: {node_id_2_coefs}")
     # generate ecdag for this ec repair
@@ -99,9 +89,14 @@ def SelectDownloadNode(node_ids, object_size, stats, download_tasks, upload_task
         min_download_time = float("inf")
         select = -1
         # try nd
+        logging.info(f"SelectDownloadNode, for i.th: {i}")
+        logging.info(f"try nd, upload time: {upload_tasks[nd - 1] * object_size / stats['upload_bandwidth'][nd - 1]}\
+                     download time: {(download_tasks[nd - 1] + 1) * (object_size) / stats['download_bandwidth'][nd - 1]}\
+                        compute time: {(download_tasks[nd - 1] + 1) * (object_size) / (1.0 / (1 + stats['cpu'][nd - 1]))}")
         download_time = max(
             upload_tasks[nd - 1] * object_size / stats["upload_bandwidth"][nd - 1],
-            (download_tasks[nd - 1] + 1) * (object_size) / stats["download_bandwidth"][nd - 1]
+            (download_tasks[nd - 1] + 1) * (object_size) / stats["download_bandwidth"][nd - 1] + \
+            (download_tasks[nd - 1] + 1) * (object_size) / (1.0 / (1 + stats["cpu"][nd - 1]))
         )
         if download_time < min_download_time:
             min_download_time = download_time
@@ -110,11 +105,19 @@ def SelectDownloadNode(node_ids, object_size, stats, download_tasks, upload_task
         # try node in node_ids(n - 1)
         for node_id in node_ids:
             if node_id in download_selector:                # already selected with a download task
+                logging.info(f"try {node_id}, upload time: {(upload_tasks[node_id - 1] + 1) * object_size / stats['upload_bandwidth'][node_id - 1]} \
+                     download time: {(download_tasks[node_id - 1] + 1) * (object_size) / stats['download_bandwidth'][node_id - 1]} \
+                        compute time: {(download_tasks[node_id - 1] + 1) * (object_size) / (1.0 / (1 + stats['cpu'][node_id - 1]))}")
                 download_time = max((upload_tasks[node_id - 1] + 1) * object_size / stats["upload_bandwidth"][node_id - 1],
-                                    (download_tasks[node_id - 1] + 1) * (object_size) / stats["download_bandwidth"][node_id - 1])
+                                    (download_tasks[node_id - 1] + 1) * (object_size) / stats["download_bandwidth"][node_id - 1] + \
+                                        (download_tasks[node_id - 1] + 1) * (object_size) / (1.0 / (1 + stats["cpu"][node_id - 1])))
             else:
+                logging.info(f"try {node_id}, upload time: {upload_tasks[node_id - 1] * object_size / stats['upload_bandwidth'][node_id - 1]} \
+                     download time: {(download_tasks[node_id - 1] + 1) * (object_size) / stats['download_bandwidth'][node_id - 1]} \
+                        compute time: {(download_tasks[node_id - 1] + 1) * (object_size) / (1.0 / (1 + stats['cpu'][node_id - 1]))}")
                 download_time = max(upload_tasks[node_id - 1] * object_size / stats["upload_bandwidth"][node_id - 1],
-                                    (download_tasks[node_id - 1] + 1) * (object_size) / stats["download_bandwidth"][node_id - 1])
+                                    (download_tasks[node_id - 1] + 1) * (object_size) / stats["download_bandwidth"][node_id - 1] + \
+                                        (download_tasks[node_id - 1] + 1) * (object_size) / (1.0 / (1 + stats["cpu"][node_id - 1])))
             if download_time < min_download_time:
                 min_download_time = download_time
                 select = node_id
@@ -144,7 +147,8 @@ def SelectUploadNode(node_ids, object_size, stats, upload_tasks, download_tasks,
                 continue
 
             upload_time = max((upload_tasks[node_id - 1] + 1) * object_size / stats["upload_bandwidth"][node_id - 1],
-                               download_tasks[node_id - 1] * object_size / stats["download_bandwidth"][node_id - 1])
+                               download_tasks[node_id - 1] * object_size / stats["download_bandwidth"][node_id - 1] + \
+                                (download_tasks[node_id - 1]) * (object_size) / (101.0 - stats["cpu"][node_id - 1]))
             if upload_time < min_upload_time:
                 min_upload_time = upload_time
                 select = node_id
@@ -200,16 +204,6 @@ def GenerateECDAG(all_node_ids, obj_ids, row_ids, node_id_2_coefs, download_sele
     global_temp_obj_id = 2047
 
 
-    # dag = {
-    #     1: [],
-    #     3: [],
-    #     6: [],
-    #     4: [(1, 4), (3, 4)],
-    #     2: [(6, 2), (4, 2)]
-    # }
-    # nd = 2
-
-
     GetEdge(dag, nd, obj_ids, row_ids, node_id_2_coefs, nd, -1, result)
     logging.info(f"result: {result}")
     # output to file
@@ -219,9 +213,6 @@ def GenerateECDAG(all_node_ids, obj_ids, row_ids, node_id_2_coefs, download_sele
 
 
 def ExecECDAG(filename, failed_node_id, upload_selector, output):
-    # nodes_str = [str(x - 1) for x in upload_selector]  
-    # nodes_str.append(str(failed_node_id - 1))
-    # print(f"node_str{nodes_str}")
     
     ssh_cmd = "ssh node01"
     cmd = "/home/openec/lmq_openec/build/ECClient decode " + filename + " " + output +  " 0 2 3 4087 1"

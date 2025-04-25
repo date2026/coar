@@ -466,7 +466,7 @@ void ECWorker::execECTasks(AGCommand* agCmd) {
         // persist
         assert(tasks[5]->_type == ECTaskType::PERSIST);
         persistTime += execPersistECTask(filename, tasks[5], objBuffer);
-        std::ofstream logFile("repair.log", std::ios::app);
+        std::ofstream logFile("/home/openec/lmq_openec/build/repair.log", std::ios::app);
         assert(logFile.is_open());
         logFile << receiveTime << " " << encodeTime << " " << persistTime << std::endl;
         logFile.close();
@@ -894,7 +894,7 @@ std::pair<timeval, timeval> ECWorker::execFetchECTaskParallel(const std::string&
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
     _hdfsHandler->readFromHDFS(file, buf, bufSizeByte);
     _hdfsHandler->closeFile(file);
-    objBuffer->insertObj(objId, buf);
+    objBuffer->insertObj(tmpObjId, buf);
     LOG_INFO("execFetchECTaskParallel done, filename: %s, nodeId: %d, odjId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
     gettimeofday(&fetchEnd, NULL);
     return {fetchStart, fetchEnd};
@@ -1140,7 +1140,7 @@ void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::v
     double encodeTime = encodeStartTime != std::numeric_limits<double>::max() ? encodeEndTime - encodeStartTime : -1.0;
     double persistTime = persistStartTime != std::numeric_limits<double>::max() ? persistEndTime - persistStartTime : -1.0;
 
-    std::ofstream logFile("repair.log", std::ios::app);
+    std::ofstream logFile("/home/openec/lmq_openec/build/repair.log", std::ios::app);
     assert(logFile.is_open());
     logFile << receiveTime << " " << encodeTime << " " << persistTime << std::endl;
     logFile.close();
