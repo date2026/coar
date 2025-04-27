@@ -5,7 +5,8 @@
 #include <deque>
 #include <iostream>
 #include <mutex>
-
+#include <cassert>
+#include <unordered_map>
 using namespace std;
 
 template <class T>
@@ -37,4 +38,34 @@ class BlockingQueue {
     }
 };
 
+class BlockingQueueParallelBuffer {
+    public:     
+        BlockingQueueParallelBuffer() {}
+        ~BlockingQueueParallelBuffer() {
+            std::unique_lock<std::mutex> lck(_mutex);
+            for (auto it = _objBuffer.begin(); it != _objBuffer.end(); ++it) {
+                delete it->second;
+            }
+        }                           
+    
+        void insertObj(int objId, BlockingQueue<char*>* objQueue) {
+            std::unique_lock<std::mutex> lck(_mutex);
+            assert(_objBuffer.find(objId) == _objBuffer.end());
+            _objBuffer[objId] = objQueue;
+            _cv.notify_all();
+        }
+        
+        BlockingQueue<char*>* getObj(int objId) {
+            std::unique_lock<std::mutex> lck(_mutex);
+            if (_objBuffer.find(objId) == _objBuffer.end()) {
+                _cv.wait(lck, [this, objId] { return _objBuffer.find(objId) != _objBuffer.end(); });
+            }
+            return _objBuffer[objId];
+        }
+    
+    private:  
+        std::unordered_map<int, BlockingQueue<char*>*> _objBuffer;
+        std::mutex _mutex;
+        std::condition_variable _cv;
+};
 #endif

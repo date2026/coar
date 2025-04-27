@@ -71,12 +71,11 @@ public:
     std::pair<timeval, timeval> execPersistECTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer);
     void startHttpService(httplib::Server& svr, const std::vector<ECTask*>& tasks, std::thread& svrThd);
     void printTime(const ConcurrentMap& timeMap, int taskNum, const std::vector<ECTask*>& tasks);
-    std::pair<timeval, timeval> execFetchECPipeTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer, BlockingQueue<char*>* queue);
-    std::pair<timeval, timeval> execSendECPipeTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer, httplib::Server& svr, BlockingQueue<char*>* queue);
-    std::pair<timeval, timeval> execReceiveECPipeTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer, BlockingQueue<char*>* queue);
-    std::pair<timeval, timeval> execEncodeECPipeTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer, 
-                                                             BlockingQueue<char*>* receive2EncodeQueue, BlockingQueue<char*>* encode2PersistQueue);
-    std::pair<timeval, timeval> execPersistECPipeTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer, BlockingQueue<char*>* queue);
+    std::pair<timeval, timeval> execFetchECPipeTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
+    std::pair<timeval, timeval> execSendECPipeTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer, httplib::Server& svr);
+    std::pair<timeval, timeval> execReceiveECPipeTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
+    std::pair<timeval, timeval> execEncodeECPipeTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
+    std::pair<timeval, timeval> execPersistECPipeTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
 };
 
 #endif

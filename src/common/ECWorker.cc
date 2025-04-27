@@ -40,8 +40,15 @@ void ECWorker::doProcess() {
             case 13: readObj(agCmd); break;
             case 14: clientEncode(agCmd); break;
             case 15: clientDecode(agCmd); break;
-            // case 16: execECTasks(agCmd); break;
-            case 16: execECTasksParallel(agCmd); break;
+            case 16: 
+                if (_conf->_ecPolicy == ECPolicy::CONV || _conf->_ecPolicy == ECPolicy::PPR) {
+                    execECTasksParallel(agCmd);
+                } else if (_conf->_ecPolicy == ECPolicy::Pipe) {
+                    execECPipeTasksParallel(agCmd);
+                } else {
+                    assert(false && "undefined ec policy");
+                }
+                break;
 			default:break;
 		}
 
@@ -140,7 +147,8 @@ void ECWorker::clientWrite(AGCommand* agcmd) {
 	for (int i = 0; i < objnum; i++) { 
 		delete loadQueue[i];
 	}
-	delete [] loadQueue;
+	// delete [] loadQueue;
+    free(loadQueue);
 
 }
 
@@ -1148,218 +1156,4 @@ void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::v
 
     LOG_INFO("fetch time: %f, send time: %f, receive time: %f, encode time: %f, persist time: %f", 
              fetchTime, sendTime, receiveTime, encodeTime, persistTime);
-}
-
-/**
- * exec ecpipe tasks in parallel
- */
-void ECWorker::execECPipeTasksParallel(AGCommand* agCmd) {
-    const std::string filename = agCmd->getFilename();
-    int taskNum = agCmd->getEcTaskNum();
-    LOG_INFO("execECPipeTasksParallel start, filename: %s, taskNum: %d", filename.c_str(), taskNum);
-
-    // store obj and tmpobj, objname->obj
-    ObjParallelBuffer* objBuffer = new ObjParallelBuffer();
-
-    // 1. get tasks from coordinator
-    const std::string receiveEcTasksKey = filename + "_ecTasks";
-    std::vector<ECTask*> tasks;
-
-    redisReply* receiveEcTasksReply;
-    
-
-    for (int i = 0; i < taskNum; i++) {
-        receiveEcTasksReply = (redisReply*)redisCommand(_localCtx, "blpop %s 0", receiveEcTasksKey.c_str());
-        assert(receiveEcTasksReply != NULL && receiveEcTasksReply->type == REDIS_REPLY_ARRAY 
-                && receiveEcTasksReply->elements == 2);
-        char* taskStr = receiveEcTasksReply->element[1]->str;
-        ECTask* task = new ECTask();
-        task->parse(taskStr);
-        LOG_INFO("ECWorker receive task, type: %d, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d, objIds: %s, encodePatternId: %d, coefs: %s", 
-                ECTaskType2int(task->_type), task->_nodeId, task->_srcNodeId, task->_dstNodeId, task->_objId, task->_tmpObjId, 
-                vec2String(task->_objIds).c_str(), task->_encodePatternId, vec2String(task->_coefs).c_str());
-        tasks.push_back(task);
-        freeReplyObject(receiveEcTasksReply);
-    }
-
-    // 2. exec tasks
-    LOG_INFO("ECWorker exec tasks, filename: %s, taskNum: %d", filename.c_str(), taskNum);
-    ConcurrentMap timeMap;
-    double sendTime = 0.0, receiveTime = 0.0, encodeTime = 0.0, persistTime = 0.0;
-    std::thread execThds[taskNum];
-    httplib::Server svr;
-    std::thread svrThd;             // thd for svr to listen
-    std::thread httpThd = std::thread([this, &svr, &tasks, &svrThd](){ startHttpService(svr, tasks, svrThd); });
-    /**
-     * fetch task: read obj from hdfs, devide by slice, push to fetch2SendQueue for send
-     * send task: read slices from fetch2SendQueue, send to target
-     * forward task: receive slices from encode2ForwardQueue, send it to target
-     * receive task: receive slices from sender, push to receive2EncodeQueue for encode
-     * encode task: read slices from receive2EncodeQueue, encode it, push to encode2PersistQueue for persist
-     * encodeForward task: read slices from receive2EncodeQueue, encode it, push to encode2ForwardQueue for forwad
-     *              (encode task and encodeForward task will not appear together in one ecplan)
-     * persist task: read slices from encode2PersistQueue, packet to obj to persist
-     * TODO:
-     * entireSend task: exec after total encode done, send total obj to new node to persist encode result
-     * entireReceive task: exec after total encode done, persist total obj after encode done as new node
-     * 叶子节点：fetch->send
-     * 中间节点节点：receive, encode, send
-     * 根节点：receive, encode, persist
-     */
-    BlockingQueue<char*>* fetch2SendQueue = new BlockingQueue<char*>();     // pushed by fetch task, pulled by send task
-    BlockingQueue<char*>* encode2ForwardQueue = new BlockingQueue<char*>(); // pushed by encodeForward task, pulled by forward task
-    BlockingQueue<char*>* receive2EncodeQueue = new BlockingQueue<char*>(); // pushed by receive task, pulled by encode task or encodeForward task(not appear together)
-    BlockingQueue<char*>* encode2PersistQueue = new BlockingQueue<char*>(); // pushed by encode task, pulled by persist task
-    for (int i = 0; i < taskNum; i++) {
-        switch (tasks[i]->_type) {
-            case ECTaskType::SEND:
-                execThds[i] = std::thread([=, &svr, &timeMap](){
-                    auto ret = execSendECPipeTaskParallel(filename, tasks[i], objBuffer, svr, fetch2SendQueue);
-                    timeMap.setTime(i, ret);
-                });
-                break;
-            case ECTaskType::RECEIVE:
-                execThds[i] = std::thread([=, &timeMap](){
-                    auto ret = execReceiveECPipeTaskParallel(filename, tasks[i], objBuffer, receive2EncodeQueue);
-                    timeMap.setTime(i, ret);
-                });
-                break;
-            case ECTaskType::ENCODE:
-                execThds[i] = std::thread([=, &timeMap](){
-                    auto ret = execEncodeECPipeTaskParallel(filename, tasks[i], objBuffer, receive2EncodeQueue, encode2PersistQueue);
-                    timeMap.setTime(i, ret);
-                });
-                break;
-            case ECTaskType::PERSIST:
-                execThds[i] = std::thread([=, &timeMap](){
-                    auto ret = execPersistECPipeTaskParallel(filename, tasks[i], objBuffer, encode2PersistQueue);
-                    timeMap.setTime(i, ret);
-                });
-                break;
-            case ECTaskType::FETCH:
-                execThds[i] = std::thread([=, &timeMap](){
-                    auto ret = execFetchECPipeTaskParallel(filename, tasks[i], objBuffer, fetch2SendQueue);
-                    timeMap.setTime(i, ret);
-                });
-                break;
-            default:
-                assert(false && "undefined ECTaskType");
-        }
-    }
-    // 3. wait for tasks done, clean
-    for (int i = 0; i < taskNum; i++) {     // clean thds to do fetch, send, receive, encode, persist 
-        execThds[i].join();
-    }
-    if (svr.is_running()) {                 // if this node has send task, stop http svr, clean svrThd
-        svr.stop();
-        svrThd.join();
-    }
-    httpThd.join();
-
-
-    printTime(timeMap, taskNum, tasks);
-
-    // 3. send encode done to coordinator
-    const std::string execEcTasksDoneKey = filename + "_ecTasks_done";
-    redisReply* execEcTasksDoneReply = (redisReply*)redisCommand(_coorCtx, "rpush %s %b", 
-            execEcTasksDoneKey.c_str(), (char*)&taskNum, sizeof(int));
-    assert(execEcTasksDoneReply != NULL && execEcTasksDoneReply->type == REDIS_REPLY_INTEGER);
-    freeReplyObject(execEcTasksDoneReply);
-    LOG_INFO("ECWorker send exec tasks done to coordinator, filename: %s, taskNum: %d", filename.c_str(), taskNum);
-
-    // 4. free tasks
-    for (auto task : tasks) {
-        delete task;
-    }
-
-    delete objBuffer;
-}
-
-/**
- * read from fetch2SendQueue, send to requestor by http
- */
-std::pair<timeval, timeval> ECWorker::execSendECPipeTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer, 
-                                                                 httplib::Server& svr, BlockingQueue<char*>* queue) {
-    const int nodeId = task->_nodeId;
-    const int srcNodeId = task->_srcNodeId;
-    const int dstNodeId = task->_dstNodeId;
-    const int objId = task->_objId;
-
-    const int objSizeByte = _conf->_objSize * 1024 * 1024;
-    const int sliceSizeByte = _conf->_sliceSize * 1024 * 1024;
-    int sliceNum = objSizeByte / sliceSizeByte;
-
-
-
-    struct timeval sendStart, sendEnd;
-
-    LOG_INFO("execSendECTaskParallel start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
-            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
-    
-    // 1. read from objBuffer
-    int bufSizeByte = _conf->_objSize * 1024 * 1024;
-    char* buf = objBuffer->getObj(objId);                   // get from objBuffer, free by objBuffer
-    LOG_INFO("execSendECTaskParallel read obj from objBuffer done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
-             filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
-    // 2. set svr for send data and start time 
-    // | sendStart | data |
-    const std::string key = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
-                                         std::to_string(dstNodeId) + "_" + std::to_string(objId);
-
-    svr.Get("/" + key, [=, &sendStart, &sendEnd](const httplib::Request& req, httplib::Response& res) {
-		LOG_INFO("http send, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
-                filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
-        char* sendBuf = new char [bufSizeByte + sizeof(timeval)];
-        memcpy(sendBuf + sizeof(timeval), buf, bufSizeByte);    // TODO: remove memcpy, send directly
-        gettimeofday(&sendStart, NULL);
-        memcpy(sendBuf, &sendStart, sizeof(timeval));
-		res.set_content(sendBuf, bufSizeByte + sizeof(timeval), "application/octet-stream");
-        delete [] sendBuf;
-        gettimeofday(&sendEnd, NULL);
-        LOG_INFO("http send done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
-                filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
-	});
-
-    // 3. send ready flag to httpServiceThd
-    redisContext* startHttpServiceCtx = RedisUtil::createContext(_conf->_localIp);
-    assert(startHttpServiceCtx != NULL);
-    redisReply* startHttpServiceReply = (redisReply*)redisCommand(startHttpServiceCtx, "rpush execSendECTaskParallel_start 0");
-    assert(startHttpServiceReply != NULL && startHttpServiceReply->type == REDIS_REPLY_INTEGER);
-    freeReplyObject(startHttpServiceReply);
-
-
-    // 4. wait for receiver flag
-    redisContext* wait4ReceiverCtx = RedisUtil::createContext(_conf->_localIp);
-    assert(wait4ReceiverCtx != NULL);
-    redisReply* wait4ReceiverReply = (redisReply*)redisCommand(wait4ReceiverCtx, "blpop %s 0", key.c_str());
-    assert(wait4ReceiverReply != NULL && wait4ReceiverReply->type == REDIS_REPLY_ARRAY && wait4ReceiverReply->elements == 2);
-    freeReplyObject(wait4ReceiverReply);
-    redisFree(wait4ReceiverCtx);
-    LOG_INFO("execSendECTaskParallel receive flag from dstNodeId: %d, objId: %d", dstNodeId, objId);
-
-    LOG_INFO("execSendECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, time: %f ms", 
-            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, RedisUtil::duration(sendStart, sendEnd));
-    return {sendStart, sendEnd};
-}
-
-
-std::pair<timeval, timeval> ECWorker::execFetchECPipeTaskParallel(const std::string& filename, const ECTask* task, 
-                                                                  ObjParallelBuffer* objBuffer, BlockingQueue<char*>* queue) {
-
-
-
-}
-std::pair<timeval, timeval> ECWorker::execReceiveECPipeTaskParallel(const std::string& filename, const ECTask* task, 
-                                                                    ObjParallelBuffer* objBuffer, BlockingQueue<char*>* queue) {
-
-}
-std::pair<timeval, timeval> ECWorker::execEncodeECPipeTaskParallel(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer, 
-                                                                   BlockingQueue<char*>* receive2EncodeQueue, BlockingQueue<char*>* encode2PersistQueue) {
-
-}
-std::pair<timeval, timeval> ECWorker::execPersistECPipeTaskParallel(const std::string& filename, const ECTask* task, 
-                                                                    ObjParallelBuffer* objBuffer, BlockingQueue<char*>* queue) {
-
-
-
 }
