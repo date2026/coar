@@ -29,6 +29,8 @@ std::vector<int> StripeStore::insertFile(const std::string& filename, int fileSi
 	LOG_INFO("StripeStore::inserFile %s start", filename.c_str());
 	_fileMetasMutex.lock();
 	std::vector<int> objLocs;
+    // TODO: curNodeId need to set correctly?
+    _curNodeId = 0;
     for (int i = 0; i < objNum; i++) {
         objLocs.push_back(_curNodeId);
 		_curNodeId = (_curNodeId + 1) % _conf->_agent_num;

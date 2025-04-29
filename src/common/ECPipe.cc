@@ -15,7 +15,8 @@ void ECWorker::execECPipeTasksParallel(AGCommand* agCmd) {
     std::vector<ECTask*> tasks;
 
     redisReply* receiveEcTasksReply;
-    
+    timeval execStart, execEnd;
+    gettimeofday(&execStart, NULL);
 
     for (int i = 0; i < taskNum; i++) {
         receiveEcTasksReply = (redisReply*)redisCommand(_localCtx, "blpop %s 0", receiveEcTasksKey.c_str());
@@ -95,7 +96,8 @@ void ECWorker::execECPipeTasksParallel(AGCommand* agCmd) {
 
 
     printTime(timeMap, taskNum, tasks);
-
+    gettimeofday(&execEnd, NULL);
+    LOG_INFO("ECWorker exec tasks done, filename: %s, taskNum: %d, time: %f ms", filename.c_str(), taskNum, RedisUtil::duration(execStart, execEnd));
     // 3. send encode done to coordinator
     const std::string execEcTasksDoneKey = filename + "_ecTasks_done";
     redisReply* execEcTasksDoneReply = (redisReply*)redisCommand(_coorCtx, "rpush %s %b", 
@@ -133,12 +135,12 @@ std::pair<timeval, timeval> ECWorker::execSendECPipeTaskParallel(const std::stri
 
     LOG_INFO("execSendECPipeTaskParallel start, filename: %s, nodeId: %d, dstNodeId: %d, objId: %d", 
              filename.c_str(), nodeId, dstNodeId, objId);
-
+    gettimeofday(&sendStart, NULL);
     // 1. read from objBuffer
     BlockingQueue<char*>* sendQueue = objBuffer->getObj(objId);         // pushed by fetch task or encode task, content free by send task, queue free by objBuffer
 
     // 2. set svr for send data and start time 
-    gettimeofday(&sendStart, NULL);
+
     const std::string key = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
     std::to_string(dstNodeId) + "_" + std::to_string(objId);
     int sliceId = 0;
@@ -209,6 +211,8 @@ std::pair<timeval, timeval> ECWorker::execFetchECPipeTaskParallel(const std::str
     }
     delete [] buf;
     LOG_INFO("execFetchECTaskParallel done, filename: %s, nodeId: %d, odjId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
+    gettimeofday(&fetchEnd, NULL);
+    return {fetchStart, fetchEnd};
 }
 
 
@@ -336,7 +340,7 @@ std::pair<timeval, timeval> ECWorker::execPersistECPipeTaskParallel(const std::s
     LOG_INFO("execPersistECPipeTaskParallel start, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
     
 
-
+    gettimeofday(&persistStart, NULL);
     const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
     int objSizeByte = _conf->_objSize * 1024 * 1024;
     int sliceSizeByte = _conf->_sliceSize * 1024 * 1024;
@@ -353,7 +357,7 @@ std::pair<timeval, timeval> ECWorker::execPersistECPipeTaskParallel(const std::s
         LOG_INFO("execPersistECPipeTaskParallel, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d, sliceId: %d", filename.c_str(), nodeId, objId, tmpObjId, i);    
     }
 
-    gettimeofday(&persistStart, NULL);
+
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::WRITE);
     _hdfsHandler->write2HDFS(file, objBuf, objSizeByte);
     _hdfsHandler->closeFile(file);

@@ -19,6 +19,9 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
     download_selector, upload_selector = {}, {}                                     # selected nodes for download and upload
     # select nd
     nd = SelectNd(new_ids, object_size, all_stats, download_jobs)
+    failed_node_id = nd
+    src_node_ids = all_node_ids.copy()
+    src_node_ids.remove(nd)
     download_jobs[nd - 1] += 1
     download_selector[nd] = download_selector.get(nd, 0) + 1
     n, k, matrix = ReadECInfo(ec_info)                                              # read ec info from file

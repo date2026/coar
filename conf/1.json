@@ -19,14 +19,14 @@
     ],
     "io_policy": "http",
     "pkt_size": 1048576,
-    "obj_size": 170,
-    "slice_size": 10,
+    "obj_size": 256,
+    "slice_size": 16,
     "agent_worker_thread_num": 8,
     "coordinator_thread_num": 8,
     "ec_param": {
         "ec_type": "RS",
         "ec_policy": "Pipe",
-        "k": 6,
+        "k": 4,
         "n": 9,
         "w": 8
     }

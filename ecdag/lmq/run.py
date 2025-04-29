@@ -19,6 +19,9 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
     download_selector, upload_selector = {}, {}                                     # selected nodes for download and upload
     # select nd
     nd = SelectNd(new_ids, object_size, all_stats, download_jobs)
+    failed_node_id = nd
+    src_node_ids = all_node_ids.copy()
+    src_node_ids.remove(nd)
     download_jobs[nd - 1] += 1
     download_selector[nd] = download_selector.get(nd, 0) + 1
     n, k, matrix = ReadECInfo(ec_info)                                              # read ec info from file
@@ -90,13 +93,13 @@ def SelectDownloadNode(node_ids, object_size, stats, download_tasks, upload_task
         select = -1
         # try nd
         logging.info(f"SelectDownloadNode, for i.th: {i}")
-        logging.info(f"try nd, upload time: {upload_tasks[nd - 1] * object_size / stats['upload_bandwidth'][nd - 1]}\
-                     download time: {(download_tasks[nd - 1] + 1) * (object_size) / stats['download_bandwidth'][nd - 1]}\
-                        compute time: {(download_tasks[nd - 1] + 1) * (object_size) / (1.0 / (1 + stats['cpu'][nd - 1]))}")
+        logging.info(f"try nd, upload time: {upload_tasks[nd - 1] * object_size / stats['upload_bandwidth'][nd - 1] :.3f}\
+                     download time: {(download_tasks[nd - 1] + 1) ** 2 * (object_size) / stats['download_bandwidth'][nd - 1] :.3f}\
+                        compute time: {(download_tasks[nd - 1] + 1) ** 2 * (object_size) / (101.0 - stats['cpu'][nd - 1]) / 10.0 :.3f}")
         download_time = max(
             upload_tasks[nd - 1] * object_size / stats["upload_bandwidth"][nd - 1],
-            (download_tasks[nd - 1] + 1) * (object_size) / stats["download_bandwidth"][nd - 1] + \
-            (download_tasks[nd - 1] + 1) * (object_size) / (1.0 / (1 + stats["cpu"][nd - 1]))
+            (download_tasks[nd - 1] + 1) ** 2 * (object_size) / stats["download_bandwidth"][nd - 1],
+            (download_tasks[nd - 1] + 1) ** 2 * (object_size) / (101.0 - stats["cpu"][nd - 1]) / 10.0
         )
         if download_time < min_download_time:
             min_download_time = download_time
@@ -105,19 +108,23 @@ def SelectDownloadNode(node_ids, object_size, stats, download_tasks, upload_task
         # try node in node_ids(n - 1)
         for node_id in node_ids:
             if node_id in download_selector:                # already selected with a download task
-                logging.info(f"try {node_id}, upload time: {(upload_tasks[node_id - 1] + 1) * object_size / stats['upload_bandwidth'][node_id - 1]} \
-                     download time: {(download_tasks[node_id - 1] + 1) * (object_size) / stats['download_bandwidth'][node_id - 1]} \
-                        compute time: {(download_tasks[node_id - 1] + 1) * (object_size) / (1.0 / (1 + stats['cpu'][node_id - 1]))}")
-                download_time = max((upload_tasks[node_id - 1] + 1) * object_size / stats["upload_bandwidth"][node_id - 1],
-                                    (download_tasks[node_id - 1] + 1) * (object_size) / stats["download_bandwidth"][node_id - 1] + \
-                                        (download_tasks[node_id - 1] + 1) * (object_size) / (1.0 / (1 + stats["cpu"][node_id - 1])))
+                logging.info(f"try {node_id}, upload time: {(upload_tasks[node_id - 1] + 1) * object_size / stats['upload_bandwidth'][node_id - 1] :.3f} \
+                     download time: {(download_tasks[node_id - 1] + 1) ** 2 * (object_size) / stats['download_bandwidth'][node_id - 1] :.3f} \
+                        compute time: {(download_tasks[node_id - 1] + 1) ** 2 * (object_size) / (101 - stats['cpu'][node_id - 1]) / 10.0 :.3f}")
+                download_time = max(
+                    (upload_tasks[node_id - 1] + 1) * object_size / stats['upload_bandwidth'][node_id - 1],
+                    (download_tasks[node_id - 1] + 1) ** 2 * (object_size) / stats['download_bandwidth'][node_id - 1],
+                    (download_tasks[node_id - 1] + 1) ** 2 * (object_size) / (101 - stats["cpu"][node_id - 1]) / 10.0
+                )
             else:
-                logging.info(f"try {node_id}, upload time: {upload_tasks[node_id - 1] * object_size / stats['upload_bandwidth'][node_id - 1]} \
-                     download time: {(download_tasks[node_id - 1] + 1) * (object_size) / stats['download_bandwidth'][node_id - 1]} \
-                        compute time: {(download_tasks[node_id - 1] + 1) * (object_size) / (1.0 / (1 + stats['cpu'][node_id - 1]))}")
-                download_time = max(upload_tasks[node_id - 1] * object_size / stats["upload_bandwidth"][node_id - 1],
-                                    (download_tasks[node_id - 1] + 1) * (object_size) / stats["download_bandwidth"][node_id - 1] + \
-                                        (download_tasks[node_id - 1] + 1) * (object_size) / (1.0 / (1 + stats["cpu"][node_id - 1])))
+                logging.info(f"try {node_id}, upload time: {upload_tasks[node_id - 1] * object_size / stats['upload_bandwidth'][node_id - 1] :.3f} \
+                        download time: {(download_tasks[node_id - 1] + 1) ** 2 * (object_size) / stats['download_bandwidth'][node_id - 1] :.3f} \
+                        compute time: {(download_tasks[node_id - 1] + 1) ** 2 * (object_size) / (101 - stats['cpu'][node_id - 1]) / 10.0 :.3f}")
+                download_time = max(
+                    upload_tasks[node_id - 1] * object_size / stats['upload_bandwidth'][node_id - 1],
+                    (download_tasks[node_id - 1] + 1) ** 2 * (object_size) / stats['download_bandwidth'][node_id - 1],
+                    (download_tasks[node_id - 1] + 1) ** 2 * (object_size) / (101 - stats["cpu"][node_id - 1]) / 10.0
+                )
             if download_time < min_download_time:
                 min_download_time = download_time
                 select = node_id

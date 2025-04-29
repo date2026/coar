@@ -99,7 +99,7 @@ void RSPlan::setRSTask(const std::vector<std::string>& taskInfo, ECTask* task) {
                 task->_coefs = _encodeMatrix[_failedRowId];
                 break;
             }
-            assert(task->_encodePatternId >= 0 && task->_encodePatternId < _k);
+            assert(task->_encodePatternId >= 0 && task->_encodePatternId < _n - _k);
             task->_coefs = _encodeMatrix[_k + task->_encodePatternId];
             assert(task->_coefs.size() == _k && "encode pattern size error");
             break;

@@ -1105,7 +1105,8 @@ void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::v
     double fetchEndTime, sendEndTime, receiveEndTime, encodeEndTime, persistEndTime;
     fetchStartTime = sendStartTime = receiveStartTime = encodeStartTime = persistStartTime = std::numeric_limits<double>::max();
     fetchEndTime = sendEndTime = receiveEndTime = encodeEndTime = persistEndTime = std::numeric_limits<double>::min();
-    
+    double execStartTime = std::numeric_limits<double>::max();
+    double execEndTime = std::numeric_limits<double>::min();
     for (int i = 0; i < taskNum; i++) {
         switch (tasks[i]->_type) {
             case ECTaskType::FETCH:
@@ -1113,18 +1114,24 @@ void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::v
                                           + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
                 fetchEndTime = std::max(fetchEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
                                         + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                execStartTime = std::min(execStartTime, fetchStartTime);
+                execEndTime = std::max(execEndTime, fetchEndTime);
                 break;
             case ECTaskType::SEND:
                 sendStartTime = std::min(sendStartTime, timeMap._timeMap.at(i).first.tv_sec * 1000.0 
                                          + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
                 sendEndTime = std::max(sendEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
                                         + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                execStartTime = std::min(execStartTime, sendStartTime);
+                execEndTime = std::max(execEndTime, sendEndTime);
                 break;
             case ECTaskType::RECEIVE:
                 receiveStartTime = std::min(receiveStartTime, timeMap._timeMap.at(i).first.tv_sec * 1000.0 
                                             + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
                 receiveEndTime = std::max(receiveEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
                                           + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                execStartTime = std::min(execStartTime, receiveStartTime);
+                execEndTime = std::max(execEndTime, receiveEndTime);
                 break;
             case ECTaskType::ENCODE:
             case ECTaskType::ENCODE_PARTIAL:
@@ -1132,12 +1139,16 @@ void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::v
                                            + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
                 encodeEndTime = std::max(encodeEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
                                          + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                execStartTime = std::min(execStartTime, encodeStartTime);
+                execEndTime = std::max(execEndTime, encodeEndTime);
                 break;
             case ECTaskType::PERSIST:
                 persistStartTime = std::min(persistStartTime, timeMap._timeMap.at(i).first.tv_sec * 1000.0 
                                             + timeMap._timeMap.at(i).first.tv_usec / 1000.0);
                 persistEndTime = std::max(persistEndTime, timeMap._timeMap.at(i).second.tv_sec * 1000.0 
                                           + timeMap._timeMap.at(i).second.tv_usec / 1000.0);
+                execStartTime = std::min(execStartTime, persistStartTime);
+                execEndTime = std::max(execEndTime, persistEndTime);
                 break;
         }
     }
@@ -1147,13 +1158,13 @@ void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::v
     double receiveTime = receiveStartTime != std::numeric_limits<double>::max() ? receiveEndTime - receiveStartTime : -1.0;
     double encodeTime = encodeStartTime != std::numeric_limits<double>::max() ? encodeEndTime - encodeStartTime : -1.0;
     double persistTime = persistStartTime != std::numeric_limits<double>::max() ? persistEndTime - persistStartTime : -1.0;
-
+    double execTime = execStartTime != std::numeric_limits<double>::max() ? execEndTime - execStartTime : -1.0;
     std::ofstream logFile("/home/openec/lmq_openec/build/repair.log", std::ios::app);
     assert(logFile.is_open());
-    logFile << receiveTime << " " << encodeTime << " " << persistTime << std::endl;
+    logFile << fetchTime << " " << sendTime << " " <<  receiveTime << " " << encodeTime << " " << persistTime << " " << execTime << std::endl;
     logFile.close();
 
 
-    LOG_INFO("fetch time: %f, send time: %f, receive time: %f, encode time: %f, persist time: %f", 
-             fetchTime, sendTime, receiveTime, encodeTime, persistTime);
+    LOG_INFO("fetch time: %f, send time: %f, receive time: %f, encode time: %f, persist time: %f, execTime: %f", 
+             fetchTime, sendTime, receiveTime, encodeTime, persistTime, execTime);
 }

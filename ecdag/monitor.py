@@ -11,7 +11,7 @@ import threading
 DEV="ens33"
 TOTAL_BD = 1000
 MIN_REPAIR_BD = 0.3*TOTAL_BD
-T = 2
+T = 1
 alpha = 1
 
 # read bandwidth from file, parse, update upload and download bandwidth
