@@ -68,25 +68,41 @@ def RefreshCPU():
     while True:
         cpu_usages = []
 
-        for i in range(T):
-            cpu_usage = psutil.cpu_percent(interval=1)
-            cpu_usages.append(cpu_usage)
+        # for i in range(T):
+        #     cpu_usage = psutil.cpu_percent(interval=1)
+        #     cpu_usages.append(cpu_usage)
         
-        cpu_usage = 0
-        for i in range(len(cpu_usages)):
-            cpu_usage += cpu_usages[i]
-        cpu_usage /= int(T)
+        # cpu_usage = 0
+        # for i in range(len(cpu_usages)):
+        #     cpu_usage += cpu_usages[i]
+        # cpu_usage /= int(T)
+        cpu_usage = psutil.cpu_percent(interval=0.5)
         
         redis_connect.set('cpu_' + local_ip, '%d'%cpu_usage)
         print(f"cpu_usage: {cpu_usage}")
         
+def RefreshLoadAverage():
+    with open("/home/openec/lmq_openec/conf/1.json") as f:
+        conf = json.load(f)
+    local_ip = conf["local_ip"]
+    
+    redis_connect = Redis(host=local_ip, port=6379, db=0)
+
+    while True:
+        load_avg = os.getloadavg()
+        load_avg = load_avg[0] * 100
+        redis_connect.set('load_avg_' + local_ip, '%d'%load_avg)
+        time.sleep(0.2)
 
 
 if __name__ == "__main__":
     print("start")
     refresh_bandwidth_thd = threading.Thread(target=RefreshBandWidth)
     refresh_cpu_thd = threading.Thread(target = RefreshCPU)
+    refresh_load_avg_thd = threading.Thread(target = RefreshLoadAverage)
     refresh_bandwidth_thd.start()
     refresh_cpu_thd.start()
+    refresh_load_avg_thd.start()
     refresh_bandwidth_thd.join()
     refresh_cpu_thd.join()
+    refresh_load_avg_thd.join()

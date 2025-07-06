@@ -10,7 +10,7 @@ local_dir = "/home/openec/lmq_openec/script/sysstat/aggregated_data"
 pic_dir = "/home/openec/lmq_openec/script/sysstat/pic"  
 ssh_username = "openec"  
 
-
+step_num = 350
 Path(local_dir).mkdir(parents=True, exist_ok=True)
 Path(pic_dir).mkdir(parents=True, exist_ok=True)
 
@@ -59,7 +59,7 @@ def aggregate_data():
             "net_send": []
         }
         # for each time step
-        for j in range(1, 81):
+        for j in range(1, step_num + 1):
             cpu_csv_file = f"{local_dir}/{node_name}_{j}-cpu.csv"
             mem_csv_file = f"{local_dir}/{node_name}_{j}-mem.csv"
             disk_csv_file = f"{local_dir}/{node_name}_{j}-disk.csv"
@@ -150,9 +150,94 @@ if __name__ == "__main__":
     
     results = aggregate_data()
     
+    x = list(range(1, step_num + 1))
+    plt.figure(figsize=(30, 12))
+    plt.plot(x, results[0]["cpu"], marker = 'o', label = 'node01')
+    plt.plot(x, results[1]["cpu"], marker = 'o', label = 'node02')
+    plt.plot(x, results[2]["cpu"], marker = 'o', label = 'node03')
+    plt.plot(x, results[3]["cpu"], marker = 'o', label = 'node04')
+    plt.plot(x, results[4]["cpu"], marker = 'o', label = 'node05')
+    plt.plot(x, results[5]["cpu"], marker = 'o', label = 'node06')
+    plt.plot(x, results[6]["cpu"], marker = 'o', label = 'node07')
+    plt.plot(x, results[7]["cpu"], marker = 'o', label = 'node08')
+    plt.plot(x, results[8]["cpu"], marker = 'o', label = 'node09')
+    plt.xlabel('time step', fontsize=12)
+    plt.ylabel('cpu util(%)', fontsize=12)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.savefig(f"{pic_dir}/cpu.svg")
+    plt.close()
+
+
+    x = list(range(1, step_num + 1))
+    plt.figure(figsize=(30, 12))
+    plt.plot(x, results[0]["cpu"], marker = 'o', label = 'node01')
+    plt.plot(x, results[4]["cpu"], marker = 'o', label = 'node05')
+    plt.plot(x, results[5]["cpu"], marker = 'o', label = 'node06')
+    plt.xlabel('time step', fontsize=12)
+    plt.ylabel('cpu util(%)', fontsize=12)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.savefig(f"{pic_dir}/cpu3_6_9.svg")
+    plt.close()
+
+    
+    x = list(range(1, step_num + 1))
+    plt.figure(figsize=(30, 12))
+    plt.plot(x, results[0]["net_receive"], marker = 'o', label = 'node01')
+    plt.plot(x, results[4]["net_receive"], marker = 'o', label = 'node05')
+    plt.plot(x, results[5]["net_receive"], marker = 'o', label = 'node06')
+    plt.xlabel('time step', fontsize=12)
+    plt.ylabel('net receive(KB/s)', fontsize=12)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.savefig(f"{pic_dir}/net_receive3_6_9.svg")
+    plt.close()
+
+    x = list(range(1, step_num + 1))
+    plt.figure(figsize=(30, 12))
+    plt.plot(x, results[0]["net_send"], marker = 'o', label = 'node01')
+    plt.plot(x, results[4]["net_send"], marker = 'o', label = 'node05')
+    plt.plot(x, results[5]["net_send"], marker = 'o', label = 'node06')
+    plt.xlabel('time step', fontsize=12)
+    plt.ylabel('net send(KB/s)', fontsize=12)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.savefig(f"{pic_dir}/net_send3_6_9.svg")
+    plt.close()
+
+
+    x = list(range(1, step_num + 1))
+    plt.figure(figsize=(30, 12))
+    plt.plot(x, results[0]["disk_read"], marker = 'o', label = 'node01')
+    plt.plot(x, results[4]["disk_read"], marker = 'o', label = 'node05')
+    plt.plot(x, results[5]["disk_read"], marker = 'o', label = 'node06')
+    plt.xlabel('time step', fontsize=12)
+    plt.ylabel('disk read(KB/s)', fontsize=12)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.savefig(f"{pic_dir}/disk_read3_6_9.svg")
+    plt.close()
+
+
+
+    x = list(range(1, step_num + 1))
+    plt.figure(figsize=(30, 12))
+    plt.plot(x, results[0]["disk_write"], marker = 'o', label = 'node01')
+    plt.plot(x, results[4]["disk_write"], marker = 'o', label = 'node05')
+    plt.plot(x, results[5]["disk_write"], marker = 'o', label = 'node06')
+    plt.xlabel('time step', fontsize=12)
+    plt.ylabel('disk write(KB/s)', fontsize=12)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.savefig(f"{pic_dir}/disk_write3_6_9.svg")
+    plt.close()
+
+
     for i in range (1, 10):
         node_name = f"node0{i}"
-        x = list(range(1, 81))
+        x = list(range(1, step_num + 1))
+        plt.figure(figsize=(30, 12))
         plt.plot(x, results[i - 1]["cpu"], marker = 'o', label = 'cpu')
         plt.ylim(0, 100)
         plt.xlabel('time step', fontsize=12)
@@ -166,7 +251,8 @@ if __name__ == "__main__":
 
     for i in range (1, 10):
         node_name = f"node0{i}"
-        x = list(range(1, 81))
+        x = list(range(1, step_num + 1))
+        plt.figure(figsize=(30, 12))
         plt.plot(x, results[i - 1]["mem"], marker = 'o', label = 'mem')
         plt.ylim(0, 100)
         plt.xlabel('time step', fontsize=12)
@@ -179,7 +265,8 @@ if __name__ == "__main__":
 
     for i in range (1, 10):
         node_name = f"node0{i}"
-        x = list(range(1, 81))
+        x = list(range(1, step_num + 1))
+        plt.figure(figsize=(30, 12))
         plt.plot(x, results[i - 1]["disk_read"], marker = 'o', markersize = 5, label = 'disk read')
         plt.plot(x, results[i - 1]["disk_write"], marker = 'x', markersize = 5, label = 'disk write')
 
@@ -194,7 +281,8 @@ if __name__ == "__main__":
 
     for i in range (1, 10):
         node_name = f"node0{i}"
-        x = list(range(1, 81))
+        x = list(range(1, step_num + 1))
+        plt.figure(figsize=(30, 12))
         plt.plot(x, results[i - 1]["net_receive"], marker = 'o', markersize = 5, label = 'receive')
         plt.plot(x, results[i - 1]["net_send"], marker = 'x', markersize = 5, label = 'send')
 

@@ -18,7 +18,8 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
     download_jobs, upload_jobs = stats.CollectJobs()                                # job count of each node
     download_selector, upload_selector = {}, {}                                     # selected nodes for download and upload
     # select nd
-    nd = SelectNd(new_ids, object_size, all_stats, download_jobs)
+    # nd = SelectNd(new_ids, object_size, all_stats, download_jobs)
+    nd = SelectNdByCPU(new_ids, object_size, all_stats, download_jobs)
     failed_node_id = nd
     src_node_ids = all_node_ids.copy()
     src_node_ids.remove(nd)
@@ -29,7 +30,9 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
     # select download node(and corresponding upload node)
     SelectDownloadNode(src_node_ids, object_size, all_stats, download_jobs, upload_jobs, \
                        k, nd, download_selector, upload_selector)                   # select download node
-    SelectUploadNode(src_node_ids, object_size, all_stats, upload_jobs, download_jobs, \
+    # SelectUploadNode(src_node_ids, object_size, all_stats, upload_jobs, download_jobs, \
+    #                  upload_selector, k)                                            # select upload node
+    SelectUploadNodeByCPU(src_node_ids, object_size, all_stats, upload_jobs, download_jobs, \
                      upload_selector, k)                                            # select upload node
     stats.UpdateTasks(download_jobs, upload_jobs)
     logging.info(f"nd: {nd}")
@@ -153,15 +156,64 @@ def SelectUploadNode(node_ids, object_size, stats, upload_tasks, download_tasks,
             if node_id in upload_selector:
                 continue
 
-            upload_time = max((upload_tasks[node_id - 1] + 1) * object_size / stats["upload_bandwidth"][node_id - 1],
-                               download_tasks[node_id - 1] * object_size / stats["download_bandwidth"][node_id - 1] + \
-                                (download_tasks[node_id - 1]) * (object_size) / (101.0 - stats["cpu"][node_id - 1]))
+            upload_time = max(
+                upload_tasks[node_id - 1] + 1 * object_size / stats["upload_bandwidth"][node_id - 1],
+                download_tasks[node_id - 1] ** 2 * (object_size) / stats["download_bandwidth"][node_id - 1],
+                download_tasks[node_id - 1] ** 2 * (object_size) / (101.0 - stats["cpu"][node_id - 1]) / 10.0
+                )
+            logging.info(f"try {node_id}, upload time: {upload_tasks[node_id - 1] + 1 * object_size / stats['upload_bandwidth'][node_id - 1] :.3f},\
+                         download time: {download_tasks[node_id - 1] ** 2 * (object_size) / stats['download_bandwidth'][node_id - 1] :.3f},\
+                            compute time: {download_tasks[node_id - 1] ** 2 * (object_size) / (101.0 - stats['cpu'][node_id - 1]) / 10.0 :.3f}")
             if upload_time < min_upload_time:
                 min_upload_time = upload_time
                 select = node_id
         upload_selector[select] = upload_selector.get(select, 0) + 1
         upload_tasks[select - 1] += 1
     logging.info(f"SelectUploadNode done, selected download tasks: {download_tasks}, upload tasks: {upload_tasks}")
+
+
+"""
+only download
+"""
+def SelectNdByCPU(node_ids, object_size, stats, download_tasks):
+    logging.info(f"SelectNdByCPU, source node_ids: {node_ids}, download_tasks: {download_tasks}, stats: {stats}")
+    nd = -1
+    min_download_time = float("inf")
+    for node_id in node_ids:
+        net_esti = (download_tasks[node_id - 1] + 1) ** 2 * (object_size) / stats["download_bandwidth"][node_id - 1]
+        cpu_esti = (download_tasks[node_id - 1] + 1) ** 2 * (object_size) / (101.0 - stats["cpu"][node_id - 1]) / 10.0
+        download_time = max(net_esti, cpu_esti)
+        logging.info(f"try {node_id}, net esti: {net_esti:.3f}, cpu esti: {cpu_esti:.3f}")
+        if download_time < min_download_time:
+            min_download_time = download_time
+            nd = node_id
+    logging.info(f"SelectNdByCPU done, selected nd: {nd}")
+    return nd
+
+"""
+only upload
+"""
+def SelectUploadNodeByCPU(node_ids, object_size, stats, upload_tasks, download_tasks, upload_selector, k):
+    logging.info(f"SelectUploadNodeByCPU, source node_ids: {node_ids}, upload_tasks: {upload_tasks}, upload_selector: {upload_selector}, stats: {stats}")
+    remain_upload_tasks_cnt = k - len(upload_selector)
+    for i in range(remain_upload_tasks_cnt):
+        select = -1
+        min_upload_time = float("inf")
+        for node_id in node_ids:
+            if node_id in upload_selector:
+                continue
+            
+            net_esti = (upload_tasks[node_id - 1] + 1) * object_size / stats["upload_bandwidth"][node_id - 1]
+            cpu_esti = (upload_tasks[node_id - 1] + 1) ** 2 * object_size / (101.0 - stats["cpu"][node_id - 1]) / 10.0
+            upload_time = max(net_esti, cpu_esti)
+
+            logging.info(f"try {node_id}, net_esti: {net_esti:.3f}, cpu_esti: {cpu_esti:.3f}")
+            if upload_time < min_upload_time:
+                min_upload_time = upload_time
+                select = node_id
+        upload_selector[select] = upload_selector.get(select, 0) + 1
+        upload_tasks[select - 1] += 1
+    logging.info(f"SelectUploadNodeByCPU done, selected download tasks: {download_tasks}, upload tasks: {upload_tasks}")
 
 
 def GenerateECDAG(all_node_ids, obj_ids, row_ids, node_id_2_coefs, download_selector, upload_selector, nd, matrix, n, k, output):

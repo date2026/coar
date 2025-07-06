@@ -10,13 +10,15 @@ def CollectStats(cpu_flag, mem_flag, disk_flag, net_flag):
     local_ip = conf["local_ip"]
     agent_ips = conf["agent_ips"]
     agent_num = conf["agent_num"]
-    ret = {"cpu": [], "upload_bandwidth": [], "download_bandwidth": [], "mem": [], "disk": []}
+    ret = {"cpu": [], "upload_bandwidth": [], "download_bandwidth": [], "mem": [], "disk": [], "load_avg": []}
     for i in range(agent_num):
         agent_ip = agent_ips[i]
         agent_connect = Redis(host=agent_ip, port=6379, db=0)
         if cpu_flag:
             cpu_usage = agent_connect.get('cpu_' + agent_ip)
             ret["cpu"].append(int(cpu_usage))
+            load_avg = agent_connect.get('load_avg_' + agent_ip)
+            ret["load_avg"].append(int(load_avg) / 100.0)
         if net_flag:
             upload_bandwidth = agent_connect.get('recovery_up_' + agent_ip)
             download_bandwidth = agent_connect.get('recovery_dw_' + agent_ip)

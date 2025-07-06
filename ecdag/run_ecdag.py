@@ -3,6 +3,7 @@
 from util.stats import *
 from hpca25 import run as hpca25_run
 from lmq import run as lmq_run
+from load_avg import run as load_avg_run
 import argparse
 
 def GetParse():
@@ -112,6 +113,19 @@ python3 run_ecdag.py --type lmq --filename /input_1024MB_back --failed_node_id 4
 python3 run_ecdag.py --type lmq --filename /input_1024MB_back_back --failed_node_id 4 --src_node_ids 1 2 3 4 5 6 7 8 9 --new_ids 1 2 3 4 5 6 7 8 9 --all_node_ids 1 2 3 4 5 6 7 8 9 \
     --obj_ids 0 1 2 3 4089 4088 4087 4086 4085 --row_ids 1 2 3 4 5 6 7 8 9 --object_size 268435456 --ec_info /home/openec/lmq_openec/build/ec_info \
     --output /home/openec/lmq_openec/build/input_1024MB_back_back_ecdag_temp
+
+# load_avg
+python3 run_ecdag.py --type load_avg --filename /input_1024MB --failed_node_id 4 --src_node_ids 1 2 3 4 5 6 7 8 9 --new_ids 1 2 3 4 5 6 7 8 9 --all_node_ids 1 2 3 4 5 6 7 8 9 \
+    --obj_ids 0 1 2 3 4089 4088 4087 4086 4085 --row_ids 1 2 3 4 5 6 7 8 9 --object_size 268435456 --ec_info /home/openec/lmq_openec/build/ec_info \
+    --output /home/openec/lmq_openec/build/input_1024MB_ecdag_temp
+
+python3 run_ecdag.py --type load_avg --filename /input_1024MB_back --failed_node_id 4 --src_node_ids 1 2 3 4 5 6 7 8 9 --new_ids 1 2 3 4 5 6 7 8 9 --all_node_ids 1 2 3 4 5 6 7 8 9 \
+    --obj_ids 0 1 2 3 4089 4088 4087 4086 4085 --row_ids 1 2 3 4 5 6 7 8 9 --object_size 268435456 --ec_info /home/openec/lmq_openec/build/ec_info \
+    --output /home/openec/lmq_openec/build/input_1024MB_back_ecdag_temp
+
+python3 run_ecdag.py --type load_avg --filename /input_1024MB_back_back --failed_node_id 4 --src_node_ids 1 2 3 4 5 6 7 8 9 --new_ids 1 2 3 4 5 6 7 8 9 --all_node_ids 1 2 3 4 5 6 7 8 9 \
+    --obj_ids 0 1 2 3 4089 4088 4087 4086 4085 --row_ids 1 2 3 4 5 6 7 8 9 --object_size 268435456 --ec_info /home/openec/lmq_openec/build/ec_info \
+    --output /home/openec/lmq_openec/build/input_1024MB_back_back_ecdag_temp
 """
 if __name__ == "__main__":
     parser = GetParse()
@@ -122,5 +136,8 @@ if __name__ == "__main__":
     elif parser.type == "lmq":
         lmq_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
                     parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
+    elif parser.type == "load_avg":
+        load_avg_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
+                          parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
     else:
         assert False and "undefined type"

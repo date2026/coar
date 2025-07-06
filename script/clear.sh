@@ -22,6 +22,7 @@ do
 
     ssh $USER@$host "rm -rf /home/openec/lmq_openec/build/repair.log"
     ssh $USER@$host "rm -rf /home/openec/lmq_openec/build/ECAgent.log"
+    ssh $USER@$host "sudo tc qdisc delete dev ens33 root"
 } &
 done
 wait
