@@ -47,7 +47,7 @@ public:
     std::unordered_map<std::string, int> _offlineECBase = {{"rs_9_6_pool", 1}};
     std::string _data_policy = "random";
     std::string _fsType = "HDFS3";
-    std::unordered_map<std::string, std::vector<std::string>> _fsFactory = {{"HDFS3", {"192.168.220.160", "9000"}}};
+    std::unordered_map<std::string, std::vector<std::string>> _fsFactory = {{"HDFS3", {"192.168.0.219", "9000"}}};
 
     std::string _repair_scheduling = "delay";
     int _ec_concurrent = 64;

@@ -1,5 +1,5 @@
 host_num=9
-USER=openec
+USER=root
 NODE_NAME=node
 for((i=1;i<=$host_num;i++));
 do

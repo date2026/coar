@@ -2,18 +2,18 @@
 
 NODE_NUM=9
 NODE_NAME=node
-HOME=/home/openec/lmq_openec
-
+HOME=/root/lmq_openec
+USER=root
 ip_list=(
-    192.168.220.161 
-    192.168.220.162 
-	192.168.220.163
-	192.168.220.164
-    192.168.220.165
-    192.168.220.166 
-	192.168.220.167
-	192.168.220.168
-    192.168.220.169 
+    192.168.0.220 
+	192.168.0.221
+	192.168.0.222
+    192.168.0.223
+    192.168.0.224 
+	192.168.0.225
+	192.168.0.226
+    192.168.0.227
+    192.168.0.228
 )
 
 
@@ -27,7 +27,7 @@ do
         host=${NODE_NAME}$i
     fi
 
-    ssh $USER@$host "sudo tc qdisc delete dev ens33 root;chmod +x $HOME/script/tc.sh; bash $HOME/script/tc.sh"
+    ssh $USER@$host "sudo tc qdisc delete dev eth0 root;chmod +x $HOME/script/tc.sh; bash $HOME/script/tc.sh"
 } &
 done
 

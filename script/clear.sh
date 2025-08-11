@@ -1,10 +1,7 @@
 host_num=9
-USER=openec
+USER=root
 NODE_NAME=node
-DIR=/home/openec/lmq_openec
-namenode_ip=192.168.220.160
-
-
+DIR=/root/lmq_openec
 
 rm -rf $DIR/build/ECCoordinator.log $DIR/build/fileMeta
 
@@ -20,9 +17,9 @@ do
 		ip=192.168.220.16$i
 	fi
 
-    ssh $USER@$host "rm -rf /home/openec/lmq_openec/build/repair.log"
-    ssh $USER@$host "rm -rf /home/openec/lmq_openec/build/ECAgent.log"
-    ssh $USER@$host "sudo tc qdisc delete dev ens33 root"
+    ssh $USER@$host "rm -rf $DIR/build/repair.log"
+    ssh $USER@$host "rm -rf $DIR/build/ECAgent.log"
+    ssh $USER@$host "sudo tc qdisc delete dev eth0 root"
 } &
 done
 wait

@@ -474,7 +474,7 @@ void ECWorker::execECTasks(AGCommand* agCmd) {
         // persist
         assert(tasks[5]->_type == ECTaskType::PERSIST);
         persistTime += execPersistECTask(filename, tasks[5], objBuffer);
-        std::ofstream logFile("/home/openec/lmq_openec/build/repair.log", std::ios::app);
+        std::ofstream logFile("/root/lmq_openec/build/repair.log", std::ios::app);
         assert(logFile.is_open());
         logFile << receiveTime << " " << encodeTime << " " << persistTime << std::endl;
         logFile.close();
@@ -1159,7 +1159,7 @@ void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::v
     double encodeTime = encodeStartTime != std::numeric_limits<double>::max() ? encodeEndTime - encodeStartTime : -1.0;
     double persistTime = persistStartTime != std::numeric_limits<double>::max() ? persistEndTime - persistStartTime : -1.0;
     double execTime = execStartTime != std::numeric_limits<double>::max() ? execEndTime - execStartTime : -1.0;
-    std::ofstream logFile("/home/openec/lmq_openec/build/repair.log", std::ios::app);
+    std::ofstream logFile("/root/lmq_openec/build/repair.log", std::ios::app);
     assert(logFile.is_open());
     logFile << fetchTime << " " << sendTime << " " <<  receiveTime << " " << encodeTime << " " << persistTime << " " << execTime << std::endl;
     logFile.close();

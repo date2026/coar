@@ -1,22 +1,12 @@
 #!/bin/bash
 
-USER="$USER"
+USER=root
 HOME=/home/$USER
 NODE_NAME=node
 NODE_NUM=9
 
 stop-dfs.sh
-if [ -f "entryStore" ];
-then
-    rm entryStore
-fi
-
-if [ -f "poolStore" ];
-then
-    rm poolStore
-fi
-
-rm -rf /home/openec/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0/data
+rm -rf /root/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0/data
 for((i=1;i<=$NODE_NUM;i++));
 do
 {
@@ -26,7 +16,7 @@ do
 	else
 		host=${NODE_NAME}$i
 	fi
-    ssh $USER@$host "rm -rf /home/openec/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0/data"
+    ssh $USER@$host "rm -rf /root/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0/data"
 } &
 done
 

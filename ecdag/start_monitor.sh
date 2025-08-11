@@ -2,7 +2,7 @@
 
 NODE_NUM=9
 NODE_NAME=node
-DIR=/home/openec/lmq_openec
+DIR=/root/lmq_openec
 
 for((i=1;i<=$NODE_NUM;i++))
 do

@@ -11,7 +11,7 @@ DEV="ens33"
 TOTAL_BD = 1000
 MIN_REPAIR_BD = 0.3*TOTAL_BD
 T = 5
-output_file = "/home/openec/lmq_openec/build/bd-output.csv"
+output_file = "/root/lmq_openec/build/bd-output.csv"
 IBM1 = "java"
 IBM2 = "ECAgent"
 LASTLINEID = -1
@@ -122,7 +122,7 @@ alpha = 1
 
 # read bandwidth from file, parse, update upload and download bandwidth
 def RefreshBandWidth():
-    with open("/home/openec/lmq_openec/conf/1.json") as f:
+    with open("/root/lmq_openec/conf/1.json") as f:
         conf = json.load(f)
     coor_ip = conf["coor_ip"]
     local_ip = conf["local_ip"]

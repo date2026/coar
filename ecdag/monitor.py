@@ -8,15 +8,15 @@ from redis import Redis
 import json
 import psutil
 import threading
-DEV="ens33"
-TOTAL_BD = 1000
+DEV="eth0"
+TOTAL_BD = 1875
 MIN_REPAIR_BD = 0.3*TOTAL_BD
 T = 1
 alpha = 1
 
 # read bandwidth from file, parse, update upload and download bandwidth
 def RefreshBandWidth():
-    with open("/home/openec/lmq_openec/conf/1.json") as f:
+    with open("/root/lmq_openec/conf/1.json") as f:
         conf = json.load(f)
     local_ip = conf["local_ip"]
     
@@ -59,7 +59,7 @@ def RefreshBandWidth():
 
 
 def RefreshCPU():
-    with open("/home/openec/lmq_openec/conf/1.json") as f:
+    with open("/root/lmq_openec/conf/1.json") as f:
         conf = json.load(f)
     local_ip = conf["local_ip"]
     
@@ -82,7 +82,7 @@ def RefreshCPU():
         print(f"cpu_usage: {cpu_usage}")
         
 def RefreshLoadAverage():
-    with open("/home/openec/lmq_openec/conf/1.json") as f:
+    with open("/root/lmq_openec/conf/1.json") as f:
         conf = json.load(f)
     local_ip = conf["local_ip"]
     

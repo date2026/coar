@@ -5,12 +5,12 @@ from io import StringIO
 import csv
 import matplotlib.pyplot as plt
 
-remote_dir = "/home/openec/lmq_openec/script/sysstat"  
-local_dir = "/home/openec/lmq_openec/script/sysstat/aggregated_data" 
-pic_dir = "/home/openec/lmq_openec/script/sysstat/pic"  
-ssh_username = "openec"  
+remote_dir = "/root/lmq_openec/script/sysstat"  
+local_dir = "/root/lmq_openec/script/sysstat/aggregated_data" 
+pic_dir = "/root/lmq_openec/script/sysstat/pic"  
+ssh_username = "root"  
 
-step_num = 350
+step_num = 160
 Path(local_dir).mkdir(parents=True, exist_ok=True)
 Path(pic_dir).mkdir(parents=True, exist_ok=True)
 
@@ -171,9 +171,9 @@ if __name__ == "__main__":
 
     x = list(range(1, step_num + 1))
     plt.figure(figsize=(30, 12))
-    plt.plot(x, results[0]["cpu"], marker = 'o', label = 'node01')
-    plt.plot(x, results[4]["cpu"], marker = 'o', label = 'node05')
-    plt.plot(x, results[5]["cpu"], marker = 'o', label = 'node06')
+    subset_node_ids = [1, 2, 3, 7]
+    for node_id in subset_node_ids:
+        plt.plot(x, results[node_id - 1]["cpu"], marker = 'o', label = f'node0{node_id}')
     plt.xlabel('time step', fontsize=12)
     plt.ylabel('cpu util(%)', fontsize=12)
     plt.legend()
@@ -181,12 +181,22 @@ if __name__ == "__main__":
     plt.savefig(f"{pic_dir}/cpu3_6_9.svg")
     plt.close()
 
+    x = list(range(1, step_num + 1))
+    plt.figure(figsize=(30, 12))
+    for node_id in subset_node_ids:
+        plt.plot(x, results[node_id - 1]["mem"], marker = 'o', label = f'node0{node_id}')
+    plt.xlabel('time step', fontsize=12)
+    plt.ylabel('mem usage', fontsize=12)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.savefig(f"{pic_dir}/mem3_6_9.svg")
+    plt.close()
+
     
     x = list(range(1, step_num + 1))
     plt.figure(figsize=(30, 12))
-    plt.plot(x, results[0]["net_receive"], marker = 'o', label = 'node01')
-    plt.plot(x, results[4]["net_receive"], marker = 'o', label = 'node05')
-    plt.plot(x, results[5]["net_receive"], marker = 'o', label = 'node06')
+    for node_id in subset_node_ids:
+        plt.plot(x, results[node_id - 1]["net_receive"], marker = 'o', label = f'node0{node_id}')
     plt.xlabel('time step', fontsize=12)
     plt.ylabel('net receive(KB/s)', fontsize=12)
     plt.legend()
@@ -196,9 +206,8 @@ if __name__ == "__main__":
 
     x = list(range(1, step_num + 1))
     plt.figure(figsize=(30, 12))
-    plt.plot(x, results[0]["net_send"], marker = 'o', label = 'node01')
-    plt.plot(x, results[4]["net_send"], marker = 'o', label = 'node05')
-    plt.plot(x, results[5]["net_send"], marker = 'o', label = 'node06')
+    for node_id in subset_node_ids:
+        plt.plot(x, results[node_id - 1]["net_send"], marker = 'o', label = f'node0{node_id}')
     plt.xlabel('time step', fontsize=12)
     plt.ylabel('net send(KB/s)', fontsize=12)
     plt.legend()
@@ -209,9 +218,8 @@ if __name__ == "__main__":
 
     x = list(range(1, step_num + 1))
     plt.figure(figsize=(30, 12))
-    plt.plot(x, results[0]["disk_read"], marker = 'o', label = 'node01')
-    plt.plot(x, results[4]["disk_read"], marker = 'o', label = 'node05')
-    plt.plot(x, results[5]["disk_read"], marker = 'o', label = 'node06')
+    for node_id in subset_node_ids:
+        plt.plot(x, results[node_id - 1]["disk_read"], marker = 'o', label = f'node0{node_id}')
     plt.xlabel('time step', fontsize=12)
     plt.ylabel('disk read(KB/s)', fontsize=12)
     plt.legend()
@@ -223,9 +231,8 @@ if __name__ == "__main__":
 
     x = list(range(1, step_num + 1))
     plt.figure(figsize=(30, 12))
-    plt.plot(x, results[0]["disk_write"], marker = 'o', label = 'node01')
-    plt.plot(x, results[4]["disk_write"], marker = 'o', label = 'node05')
-    plt.plot(x, results[5]["disk_write"], marker = 'o', label = 'node06')
+    for node_id in subset_node_ids:
+        plt.plot(x, results[node_id - 1]["disk_write"], marker = 'o', label = f'node0{node_id}')
     plt.xlabel('time step', fontsize=12)
     plt.ylabel('disk write(KB/s)', fontsize=12)
     plt.legend()
@@ -239,7 +246,7 @@ if __name__ == "__main__":
         x = list(range(1, step_num + 1))
         plt.figure(figsize=(30, 12))
         plt.plot(x, results[i - 1]["cpu"], marker = 'o', label = 'cpu')
-        plt.ylim(0, 100)
+        plt.ylim(0, 60)
         plt.xlabel('time step', fontsize=12)
         plt.ylabel('cpu util(%)', fontsize=12)
         plt.title('cpu util over time', fontsize=14)

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 host_num=9
-USER=openec
+USER=root
 NODE_NAME=node
-DIR=/home/openec/lmq_openec
+DIR=/root/lmq_openec
 
 
 for((i=1;i<=$host_num;i++))
@@ -16,6 +16,7 @@ do
         host=${NODE_NAME}$i
     fi
     ssh $USER@$host "cd $DIR/script; bash collect_sar.sh; python3 parse_sar.py"
+    # ssh $USER@$host "cd $DIR/script; python3 parse_sar.py"
 } &
 done
 wait

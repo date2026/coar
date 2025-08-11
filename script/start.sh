@@ -2,7 +2,8 @@
 
 NODE_NUM=9
 NODE_NAME=node
-DIR=/home/openec/lmq_openec
+USER=root
+DIR=/root/lmq_openec
 
 cd $DIR/build; ./ECCoordinator > ./ECCoordinator.log &
 for((i=1;i<=$NODE_NUM;i++))

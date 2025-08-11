@@ -7,7 +7,7 @@ using namespace std;
 
 int main(int argc, char** argv) {
 
-	const string confPath = "/home/openec/lmq_openec/conf/1.json";
+	const string confPath = "/root/lmq_openec/conf/1.json";
 	Config* conf = new Config(confPath);
 	conf->DumpConfig();
 	
