@@ -80,6 +80,8 @@ public:
     std::pair<char*, int> dump() const;
     void parse(const char* buf);
 
+    std::pair<char*, int> dumpFG() const;
+    void parseFG(const char* buf);
 
 
     ECTaskType _type;
@@ -105,6 +107,10 @@ public:
 
     // for ENCODE_PARTIAL
     int _objNum;
+
+    // for fg
+    int _leftBound;
+    int _rightBound;
 };
 
 

@@ -8,7 +8,7 @@ enum class ECType {
     RS, LRC, MSR
 };
 enum class ECPolicy {
-    CONV, PPR, Pipe
+    CONV, PPR, Pipe, PipeFG
 };
 struct RSParam {
     int n;

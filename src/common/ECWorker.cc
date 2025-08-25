@@ -45,6 +45,8 @@ void ECWorker::doProcess() {
                     execECTasksParallel(agCmd);
                 } else if (_conf->_ecPolicy == ECPolicy::Pipe) {
                     execECPipeTasksParallel(agCmd);
+                } else if (_conf->_ecPolicy == ECPolicy::PipeFG) {
+                    execECPipeFGTasksParallel(agCmd);
                 } else {
                     assert(false && "undefined ec policy");
                 }

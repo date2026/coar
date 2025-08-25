@@ -16,6 +16,8 @@ add_executable(ECAgent ECAgent.cc)
 add_executable(ECClient ECClient.cc)
 add_executable(HDFSDemo HDFSDemo.cc)
 add_executable(ECTest ECTest.cc)
+add_executable(ECTestNproc ECTestNproc.cc)
+add_executable(ECTestBlockSize ECTestBlockSize.cc)
 
 
 
@@ -24,4 +26,6 @@ target_link_libraries(ECAgent common pthread fs)
 target_link_libraries(ECClient common pthread)
 target_link_libraries(HDFSDemo fs)
 target_link_libraries(ECTest common pthread fs)
+target_link_libraries(ECTestNproc common pthread fs)
+target_link_libraries(ECTestBlockSize common pthread fs)
 

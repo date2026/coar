@@ -25,7 +25,7 @@
     "coordinator_thread_num": 8,
     "ec_param": {
         "ec_type": "RS",
-        "ec_policy": "Pipe",
+        "ec_policy": "PipeFG",
         "k": 4,
         "n": 9,
         "w": 8

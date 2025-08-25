@@ -41,7 +41,12 @@ void RSPlan::setRSTasks() {
         }
         ECTask* task = new ECTask();
         task->_type = taskType;
-        setRSTask(taskInfo, task);   
+        if (_conf->_ecPolicy == ECPolicy::PipeFG) {
+            setRSFGTask(taskInfo, task);
+        } else {
+            setRSTask(taskInfo, task); 
+        }
+
         _tasks[task->_nodeId].push_back(task);
     }
     LOG_INFO("RSPlan::setRSTasks done, ecdagPath: %s", _ecdagPath.c_str());
@@ -129,6 +134,94 @@ void RSPlan::setRSTask(const std::vector<std::string>& taskInfo, ECTask* task) {
             task->_nodeId = std::stoi(taskInfo[0]);
             task->_objId = std::stoi(taskInfo[1]);
             task->_tmpObjId = std::stoi(taskInfo[2]);
+            break;
+        default:
+            assert(false && "undefined ECTaskType");
+    }
+}
+
+
+/**
+ * set task info from line from ecdagPath
+ * SEND [nodeId/srcNodeId] [dstNodeId] [objId] [leftBound] [rightBound]
+ * RECEIVE [nodeId/dstNodeId][srcNodeId] [objId] [tmpObjId] [leftBound] [rightBound]
+ * ENCODE_PARTIAL [nodeId] [objNum] [objIds...] [tmpObjId] [coefs...] [leftBound] [rightBound]
+ * PERSIST [nodeId] [tmpObjId] [objId] [leftBound] [rightBound]
+ * FETCH [nodeId] [objId] [tmpObjId] [leftBound] [rightBound]
+ */
+void RSPlan::setRSFGTask(const std::vector<std::string>& taskInfo, ECTask* task) {
+    int rowId;
+    switch (task->_type) {
+        case ECTaskType::SEND:
+            assert(taskInfo.size() == 5 && "SEND task info size error");
+            task->_srcNodeId = std::stoi(taskInfo[0]);
+            task->_dstNodeId = std::stoi(taskInfo[1]);
+            task->_objId = std::stoi(taskInfo[2]);
+            task->_nodeId = task->_srcNodeId;
+            task->_leftBound = std::stoi(taskInfo[3]);
+            task->_rightBound = std::stoi(taskInfo[4]);
+            break;
+        case ECTaskType::RECEIVE:
+            assert(taskInfo.size() == 6 && "RECEIVE task info size error");
+            task->_dstNodeId = std::stoi(taskInfo[0]);
+            task->_srcNodeId = std::stoi(taskInfo[1]);
+            task->_objId = std::stoi(taskInfo[2]);
+            task->_tmpObjId = std::stoi(taskInfo[3]);
+            task->_nodeId = task->_dstNodeId;
+            task->_leftBound = std::stoi(taskInfo[4]);
+            task->_rightBound = std::stoi(taskInfo[5]);
+            break;
+        case ECTaskType::ENCODE:
+            assert(false && "PipeFG should not have ENCODE command");
+            assert(taskInfo.size() == (5 + _k) && "PERSIST task info size error");
+            task->_nodeId = std::stoi(taskInfo[0]);
+            for (int i = 0; i < _k; i++) {
+                task->_objIds.push_back(std::stoi(taskInfo[1 + i]));
+            }
+            task->_tmpObjId = std::stoi(taskInfo[1 + _k]);
+            task->_encodePatternId = std::stoi(taskInfo[2 + _k]);
+            if (task->_encodePatternId == -1) {             // decode
+                task->_coefs = _encodeMatrix[_failedRowId];
+                break;
+            }
+            assert(task->_encodePatternId >= 0 && task->_encodePatternId < _n - _k);
+            task->_coefs = _encodeMatrix[_k + task->_encodePatternId];
+            assert(task->_coefs.size() == _k && "encode pattern size error");
+            task->_leftBound = std::stoi(taskInfo[3 + _k]);
+            task->_rightBound = std::stoi(taskInfo[4 + _k]);
+            break;
+        case ECTaskType::ENCODE_PARTIAL:
+            assert(taskInfo.size() >= 7 && "ENCODE_PARTIAL task info size error");
+            task->_nodeId = std::stoi(taskInfo[0]);
+            task->_objNum = std::stoi(taskInfo[1]);
+            assert(taskInfo.size() == 5 + task->_objNum * 2 && "ENCODE_PARTIAL task info size error");
+            for (int i = 0; i < task->_objNum; i++) {
+                task->_objIds.push_back(std::stoi(taskInfo[2 + i]));
+            }
+            task->_tmpObjId = std::stoi(taskInfo[2 + task->_objNum]);
+            for (int i = 0; i < task->_objNum; i++) {
+                task->_coefs.push_back(std::stoi(taskInfo[3 + task->_objNum + i]));
+            }
+            task->_leftBound = std::stoi(taskInfo[3 + task->_objNum * 2]);
+            task->_rightBound = std::stoi(taskInfo[4 + task->_objNum * 2]);
+            break;
+        case ECTaskType::PERSIST:
+            assert(taskInfo.size() == 6 && "PERSIST task info size error");
+            task->_nodeId = std::stoi(taskInfo[0]);
+            task->_tmpObjId = std::stoi(taskInfo[1]);
+            task->_objId = std::stoi(taskInfo[2]);
+            rowId = std::stoi(taskInfo[3]);
+            _fileMeta->setRowId(task->_objId, rowId);       // set rowId of this obj, used in decode to know which row this obj is
+            task->_leftBound = std::stoi(taskInfo[4]);
+            task->_rightBound = std::stoi(taskInfo[5]);
+            break;
+        case ECTaskType::FETCH:
+            assert(taskInfo.size() == 5 && "FETCH task info size error");
+            task->_nodeId = std::stoi(taskInfo[0]);
+            task->_objId = std::stoi(taskInfo[1]);
+            task->_tmpObjId = std::stoi(taskInfo[2]);
+            task->_leftBound = std::stoi(taskInfo[3]);
+            task->_rightBound = std::stoi(taskInfo[4]);
             break;
         default:
             assert(false && "undefined ECTaskType");

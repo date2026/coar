@@ -55,6 +55,8 @@ Config::Config(const std::string& file_path) {
         _ecPolicy = ECPolicy::PPR;
     } else if (ecPolicy == "Pipe") {
         _ecPolicy = ECPolicy::Pipe;
+    } else if (ecPolicy == "PipeFG") {
+        _ecPolicy = ECPolicy::PipeFG;
     } else {
         assert(false && "invalid ec policy");
     }

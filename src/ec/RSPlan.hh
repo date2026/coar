@@ -15,6 +15,7 @@ public:
 private:
     void setRSTasks();
     void setRSTask(const std::vector<std::string>& taskInfo, ECTask* task);
+    void setRSFGTask(const std::vector<std::string>& taskInfo, ECTask* task);
     void generateMatrix();
     void generateDecodeMatrix(const std::vector<int>& survivedObjIds, int failedObjId);
 

@@ -206,6 +206,266 @@ void ECTask::parse(const char* buf) {
 }
 
 
+
+/**
+ * SEND [nodeId/srcNodeId] [dstNodeId] [objId] [leftBound] [rightBound]
+ * RECEIVE [nodeId/dstNodeId] [srcNodeId] [objId] [tmpObjId] [leftBound] [rightBound]
+ * ENCODE [nodeId] [objNum] [objId...] [tmpObjId] [encodePatternId] [coef...] [leftBound] [rightBound]
+ * ENCODE_PARTIAL [nodeId] [objNum] [objIds...] [tmpObjId] [coefs...] [leftBound] [rightBound]
+ * PERSIST [nodeId] [tmpObjId] [objId] [leftBound] [rightBound]
+ * FETCH [nodeId] [objId] [tmpObjId] [leftBound] [rightBound]
+ */
+std::pair<char*, int> ECTask::dumpFG() const {
+    int len;
+    char* buf;
+    int offset = 0;
+    int tmpType = ECTaskType2int(_type);
+    int objNum;
+    switch (_type) {
+        case ECTaskType::SEND:
+            len = sizeof(int) * 6;
+            buf = new char[len];
+            memcpy(buf + offset, (char*)&tmpType, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_srcNodeId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_dstNodeId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_objId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_leftBound, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_rightBound, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::RECEIVE:
+            len = sizeof(int) * 7;
+            buf = new char[len];
+            memcpy(buf + offset, (char*)&tmpType, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_dstNodeId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_srcNodeId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_objId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_tmpObjId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_leftBound, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_rightBound, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::ENCODE:
+            len = sizeof(int) * (7 + _objIds.size() + _coefs.size());
+            buf = new char[len];
+            memcpy(buf + offset, (char*)&tmpType, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_nodeId, sizeof(int));
+            offset += sizeof(int);
+            objNum = _objIds.size();
+            memcpy(buf + offset, (char*)&objNum, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                memcpy(buf + offset, (char*)&_objIds[i], sizeof(int));
+                offset += sizeof(int);
+            }
+            memcpy(buf + offset, (char*)&_tmpObjId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_encodePatternId, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                memcpy(buf + offset, (char*)&_coefs[i], sizeof(int));
+                offset += sizeof(int);
+            }
+            memcpy(buf + offset, (char*)&_leftBound, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_rightBound, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::ENCODE_PARTIAL:
+            len = sizeof(int) * (6 + _objIds.size() + _coefs.size());
+            buf = new char[len];
+            memcpy(buf + offset, (char*)&tmpType, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_nodeId, sizeof(int));
+            offset += sizeof(int);
+            objNum = _objIds.size();
+            memcpy(buf + offset, (char*)&objNum, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                memcpy(buf + offset, (char*)&_objIds[i], sizeof(int));
+                offset += sizeof(int);
+            }
+            memcpy(buf + offset, (char*)&_tmpObjId, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                memcpy(buf + offset, (char*)&_coefs[i], sizeof(int));
+                offset += sizeof(int);
+            }
+            memcpy(buf + offset, (char*)&_leftBound, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_rightBound, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::PERSIST:
+            len = sizeof(int) * 6;
+            buf = new char [len];
+            memcpy(buf + offset, (char*)&tmpType, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_nodeId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_tmpObjId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_objId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_leftBound, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_rightBound, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::FETCH:
+            len = sizeof(int) * 6;
+            buf = new char [len];
+            memcpy(buf + offset, (char*)&tmpType, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_nodeId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_tmpObjId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_objId, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_leftBound, sizeof(int));
+            offset += sizeof(int);
+            memcpy(buf + offset, (char*)&_rightBound, sizeof(int));
+            offset += sizeof(int);
+            break;
+        default:
+            assert(false && "undefined ECTaskType");
+    }
+    return {buf, len};
+}
+
+
+
+void ECTask::parseFG(const char* buf) {
+    int offset = 0;
+    // read type
+    int tmpType;
+    memcpy((char*)&tmpType, buf + offset, sizeof(int));
+    offset += sizeof(int);
+    _type = int2ECTaskType(tmpType);
+    switch (_type) {
+        case ECTaskType::SEND:
+            memcpy((char*)&_srcNodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_dstNodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_objId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            _nodeId = _srcNodeId;
+            memcpy((char*)&_leftBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_rightBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::RECEIVE:
+            memcpy((char*)&_dstNodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_srcNodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_objId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_tmpObjId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            _nodeId = _dstNodeId;
+            memcpy((char*)&_leftBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_rightBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::ENCODE:
+            memcpy((char*)&_nodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            int objNum;
+            memcpy((char*)&objNum, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                int objId;
+                memcpy((char*)&objId, buf + offset, sizeof(int));
+                _objIds.push_back(objId);
+                offset += sizeof(int);
+            }
+            memcpy((char*)&_tmpObjId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_encodePatternId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                int coef;
+                memcpy((char*)&coef, buf + offset, sizeof(int));
+                _coefs.push_back(coef);
+                offset += sizeof(int);
+            }           
+            memcpy((char*)&_leftBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_rightBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::ENCODE_PARTIAL:
+            memcpy((char*)&_nodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&objNum, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                int objId;
+                memcpy((char*)&objId, buf + offset, sizeof(int));
+                _objIds.push_back(objId);
+                offset += sizeof(int);
+            }
+            memcpy((char*)&_tmpObjId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            for (int i = 0; i < objNum; i++) {
+                int coef;
+                memcpy((char*)&coef, buf + offset, sizeof(int));
+                _coefs.push_back(coef);
+                offset += sizeof(int);
+            }          
+            memcpy((char*)&_leftBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_rightBound, buf + offset, sizeof(int));
+            offset += sizeof(int); 
+            break;
+        case ECTaskType::PERSIST:
+            memcpy((char*)&_nodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_tmpObjId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_objId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_leftBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_rightBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            break;
+        case ECTaskType::FETCH:
+            memcpy((char*)&_nodeId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_tmpObjId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_objId, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_leftBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            memcpy((char*)&_rightBound, buf + offset, sizeof(int));
+            offset += sizeof(int);
+            break;
+        default:
+            assert(false && "undefined ECTaskType");
+    }
+}
+
+
+
 ECPlan::ECPlan(Config* conf, FileMeta* fileMeta, const std::string& ecdagPath) {    
     _conf = conf;
     _fileMeta = fileMeta;
@@ -238,7 +498,11 @@ void ECPlan::send() {
         std::vector<ECTask*> tasks = it->second;
         std::vector<std::pair<char*, int>> taskBufs;
         for (auto task : tasks) {
-            taskBufs.push_back(task->dump());
+            if (_conf->_ecPolicy == ECPolicy::PipeFG) {
+                taskBufs.push_back(task->dumpFG());
+            } else {
+                taskBufs.push_back(task->dump());
+            }
         }
 
         // send task num to agent

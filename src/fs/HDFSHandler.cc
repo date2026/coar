@@ -45,6 +45,15 @@ void HDFSHandler::readFromHDFS(hdfsFile file, char* buf, int bufSize) {
     int readSize = hdfsPread(_fs, file, 0, buf, bufSize);
     assert(readSize == bufSize && "Failed to read from file");
 }
+
+
+void HDFSHandler::pReadFromHDFS(hdfsFile file, char* buf, int pos, int bufSize) {
+    assert(_fs != nullptr && file != nullptr);
+    int readSize = hdfsPread(_fs, file, pos, buf, bufSize);
+    assert(readSize == bufSize && "Failed to read from file");
+}
+
+
 void HDFSHandler::closeFile(hdfsFile file) {
     assert(_fs != nullptr);
     int ret = hdfsCloseFile(_fs, file);

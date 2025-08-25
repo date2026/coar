@@ -43,6 +43,7 @@ public:
     void execECTasks(AGCommand* agCmd);
     void execECTasksParallel(AGCommand* agCmd);
     void execECPipeTasksParallel(AGCommand* agCmd);
+    void execECPipeFGTasksParallel(AGCommand* agCmd);
     // load data from redis, called by clientWrite
     void loadWorker(BlockingQueue<ECDataPacket*>* readQueue,
                     string keybase,
@@ -76,6 +77,15 @@ public:
     std::pair<timeval, timeval> execReceiveECPipeTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
     std::pair<timeval, timeval> execEncodeECPipeTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
     std::pair<timeval, timeval> execPersistECPipeTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
+
+    /**
+     * exec ecpipe fg task, called by execECPipeFGTasksParallel
+     */
+    std::pair<timeval, timeval> execFetchECPipeFGTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
+    std::pair<timeval, timeval> execSendECPipeFGTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer, httplib::Server& svr);
+    std::pair<timeval, timeval> execReceiveECPipeFGTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
+    std::pair<timeval, timeval> execEncodeECPipeFGTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
+    std::pair<timeval, timeval> execPersistECPipeFGTaskParallel(const std::string& filename, const ECTask* task, BlockingQueueParallelBuffer* objBuffer);
 };
 
 #endif
