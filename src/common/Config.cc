@@ -15,11 +15,16 @@ Config::Config(const std::string& file_path) {
     json conf = json::parse(ifile);
 
     _localIp = inet_addr(conf.at("local_ip").get<std::string>().c_str());
+    _localIpStr = conf.at("local_ip").get<std::string>();
     _coorIp = inet_addr(conf.at("coor_ip").get<std::string>().c_str());
     
 
     _agent_num = conf.at("agent_num").get<int>();
     std::vector<std::string> agentIps = conf.at("agent_ips").get<std::vector<std::string>>();
+    if (_localIp != _coorIp) {
+        _node_id = std::find(agentIps.begin(), agentIps.end(), _localIpStr) - agentIps.begin();
+        assert(_node_id >= 0 && _node_id <= _agent_num - 1);
+    }
     for (const auto& agentIp : agentIps) {
         _agent_ips.push_back(inet_addr(agentIp.c_str()));
     }

@@ -1093,7 +1093,7 @@ void ECWorker::startHttpService(httplib::Server& svr, const std::vector<ECTask*>
                && startHttpServiceReply -> elements == 2);
         freeReplyObject(startHttpServiceReply);
     }
-
+    LOG_INFO("start listen, send task num: %d", sendECTaskNum);
     svrThd = std::thread([&](){
 		svr.listen("0.0.0.0", 8080);
     });
@@ -1169,4 +1169,37 @@ void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::v
 
     LOG_INFO("fetch time: %f, send time: %f, receive time: %f, encode time: %f, persist time: %f, execTime: %f", 
              fetchTime, sendTime, receiveTime, encodeTime, persistTime, execTime);
+}
+
+/**
+ * Record GF computation history data to Redis for overhead prediction
+ */
+void ECWorker::recordGFComputationHistory(double cpu_util, int num_blocks, int block_size, double overhead_ms) {
+    const std::string queue_name = "gf_overhead_queue";
+    // node_id:cpu_usage:w:blocks:block_size:time
+
+    const std::string record = std::to_string(_conf->_node_id) + ":" + 
+                                std::to_string(cpu_util) + ":" + 
+                                std::to_string(_conf->_rsParam.w) + ":" + 
+                                std::to_string(num_blocks) + ":" + 
+                                std::to_string(block_size) + ":" +
+                                std::to_string(overhead_ms); 
+    redisReply* reply = (redisReply*)redisCommand(_coorCtx, "rpush %s %b", queue_name.c_str(), record.c_str(), record.size());
+    assert(reply != NULL && reply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(reply);
+
+    LOG_INFO("Recorded GF computation history: cpu_util: %f, num_blocks: %d, block_size: %d, overhead: %f", 
+            cpu_util, num_blocks, block_size, overhead_ms);    
+}
+
+/**
+ * Get current CPU utilization percentage before exec task
+ */
+double ECWorker::getCurrentCPUUtilization() {
+    const std::string key = "cpu_" + _conf->_localIpStr;
+    redisReply* reply = (redisReply*)redisCommand(_localCtx, "GET %s", key.c_str());
+    assert(reply != NULL && reply->type == REDIS_REPLY_STRING);
+    double cpu_util = std::stod(reply->str);
+    freeReplyObject(reply);
+    return cpu_util;
 }

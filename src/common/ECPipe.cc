@@ -289,7 +289,8 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeTaskParallel(const std::st
     assert(objSizeByte % sliceSizeByte == 0);
     int sliceNum = objSizeByte / sliceSizeByte;
     timeval encodeStart, encodeEnd;
-    
+    double cpu_util = getCurrentCPUUtilization();
+
     LOG_INFO("execEncodeECTaskParallel start, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, coefs: %s",
              filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, vec2String(coefs).c_str()); 
     std::vector<BlockingQueue<char*>*> receiveQueues;
@@ -302,6 +303,8 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeTaskParallel(const std::st
     objBuffer->insertObj(tmpObjId, encodeQueue);
     gettimeofday(&encodeStart, NULL);
 
+    timeval sliceStart, sliceEnd;
+    double sliceEncodeTime = 0.0;
     for (int i = 0; i < sliceNum; i++) {
         std::vector<const char*> sliceBufs;
         for (int j = 0; j < objIds.size(); j++) {
@@ -310,7 +313,10 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeTaskParallel(const std::st
         }
         char* encodeBuf = new char[sliceSizeByte];                          // free after send task or persist task
         memset(encodeBuf, 0, sliceSizeByte);
+        gettimeofday(&sliceStart, NULL);
         RSPlan::encode(sliceBufs, encodeBuf, coefs, _conf->_rsParam.w, sliceSizeByte);
+        gettimeofday(&sliceEnd, NULL);
+        sliceEncodeTime += RedisUtil::duration(sliceStart, sliceEnd);
         encodeQueue->push(encodeBuf);
         // free sliceBufs
         for (int j = 0; j < objIds.size(); j++) {
@@ -323,6 +329,10 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeTaskParallel(const std::st
     gettimeofday(&encodeEnd, NULL);
     LOG_INFO("execEncodeECTaskParallel done, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, coefs: %s, encode time: %f ms",
                 filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, vec2String(coefs).c_str(), RedisUtil::duration(encodeStart, encodeEnd)); 
+    double encodeTime = RedisUtil::duration(encodeStart, encodeEnd);
+    LOG_INFO("encodeTime: %f, sliceEncodeTime: %f", encodeTime, sliceEncodeTime);
+    // Record GF computation history data for overhead prediction
+    recordGFComputationHistory(cpu_util, sliceNum, sliceNum * _conf->_sliceSize, sliceEncodeTime);
     return {encodeStart, encodeEnd};                                     
 }
 

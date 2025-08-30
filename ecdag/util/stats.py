@@ -1,10 +1,17 @@
 from redis import Redis
 import json
-
-
+import sys 
+import logging
+import threading
+import time
+from util import gf_cost_recorder
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(filename)s:%(lineno)d] %(levelname)s  - %(message)s'
+)
 
 # collect node stats for generate ecdag 
-def CollectStats(cpu_flag, mem_flag, disk_flag, net_flag):
+def CollectStats(cpu_flag, mem_flag, disk_flag, net_flag, gf_bandwidths_flag = False, w = 8, recorders = None):
     with open("/root/lmq_openec/conf/1.json") as f:
         conf = json.load(f)
     local_ip = conf["local_ip"]
@@ -24,6 +31,11 @@ def CollectStats(cpu_flag, mem_flag, disk_flag, net_flag):
             download_bandwidth = agent_connect.get('recovery_dw_' + agent_ip)
             ret["upload_bandwidth"].append(float(upload_bandwidth))
             ret["download_bandwidth"].append(float(download_bandwidth))
+    
+    # get gf bandwidth of all worker nodes
+    if gf_bandwidths_flag:
+        ret["gf_bandwidth"] = recorders.GetGFBandwidths(ret["cpu"], w)
+
 
     return ret
 

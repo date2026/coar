@@ -30,6 +30,12 @@ private:
 
     UnderFS* _underfs;
     HDFSHandler* _hdfsHandler;
+
+    std::mutex _svrMutex;                // provide concurrency when init api for httpserver
+    // Record GF computation history data
+    void recordGFComputationHistory(double cpu_util, int num_blocks, int block_size, double overhead_ms);
+    double getCurrentCPUUtilization();
+
 public:
     ECWorker(Config* conf);
     ~ECWorker();

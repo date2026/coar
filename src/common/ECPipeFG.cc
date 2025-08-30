@@ -144,6 +144,7 @@ std::pair<timeval, timeval> ECWorker::execSendECPipeFGTaskParallel(const std::st
 
     const std::string key = filename + "_send_" + std::to_string(srcNodeId) + "_" + std::to_string(dstNodeId) + "_" + std::to_string(objId);
     int sliceId = 0;
+    _svrMutex.lock();
     svr.Get("/" + key, [=, &sendStart, &sendEnd, &sliceId](const httplib::Request& req, httplib::Response& res) {
         LOG_INFO("http send, filename: %s, nodeId: %d, dstNodeId: %d, objId: %d, sliceId: %d", 
                  filename.c_str(), nodeId, dstNodeId, objId, sliceId);
@@ -154,8 +155,10 @@ std::pair<timeval, timeval> ECWorker::execSendECPipeFGTaskParallel(const std::st
                  filename.c_str(), nodeId, dstNodeId, objId, sliceId);
         sliceId++;
     });
+    _svrMutex.unlock();
 
     // 3. send ready flag to httpServiceThd
+    LOG_INFO("http get ready for %s", key.c_str());
     redisContext* startHttpServiceCtx = RedisUtil::createContext(_conf->_localIp);
     assert(startHttpServiceCtx != NULL);
     redisReply* startHttpServiceReply = (redisReply*)redisCommand(startHttpServiceCtx, "rpush execSendECTaskParallel_start 0");
@@ -172,8 +175,8 @@ std::pair<timeval, timeval> ECWorker::execSendECPipeFGTaskParallel(const std::st
     redisFree(wait4ReceiverCtx);
     LOG_INFO("execSendECTaskParallel receive flag from dstNodeId: %d, objId: %d", dstNodeId, objId);
     gettimeofday(&sendEnd, NULL);
-    LOG_INFO("execSendECTask done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, time: %f ms", 
-    filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, RedisUtil::duration(sendStart, sendEnd));
+    LOG_INFO("execSendECTaskParallel done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, time: %f ms", 
+            filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, RedisUtil::duration(sendStart, sendEnd));
     return {sendStart, sendEnd};
 }
 
@@ -262,8 +265,14 @@ std::pair<timeval, timeval> ECWorker::execReceiveECPipeFGTaskParallel(const std:
 
                 receiveQueue->push(obj);
                 break;
+            } else if (!res) {
+                LOG_INFO("execReceiveECTaskParallel failed, res is nullptr, filename: %s, nodeId: %d, srcNodeId: %d, objId: %d, tmpObjId: %d, sliceId: %d", 
+                        filename.c_str(), nodeId, srcNodeId, objId, tmpObjId, i);
+            } else {
+                LOG_INFO("execReceiveECTaskParallel failed, status: %d, key: %s, nodeId: %d, srcNodeId: %d, objId: %d, tmpObjId: %d, sliceId: %d", 
+                         res->status, receiveObjKey.c_str(), nodeId, srcNodeId, objId, tmpObjId, i);
             }
-            printf("try for sliceId: %d\n", i);
+            cli = Client(RedisUtil::ip2Str(_conf->_agent_ips[srcNodeId]).c_str(), 8080);
         } while (true);
     }
 
@@ -297,7 +306,8 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeFGTaskParallel(const std::
     const int sliceNum = rightBound - leftBound + 1;
     const int sliceSizeByte = _conf->_sliceSize * 1024 * 1024;
     timeval encodeStart, encodeEnd;
-    
+    double cpu_util = getCurrentCPUUtilization();
+
     LOG_INFO("execEncodeECTaskParallel start, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, coefs: %s, leftBound: %d, rightBound: %d",
              filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, vec2String(coefs).c_str(), leftBound, rightBound); 
     std::vector<BlockingQueue<char*>*> receiveQueues;
@@ -310,6 +320,9 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeFGTaskParallel(const std::
     objBuffer->insertObj(tmpObjId, encodeQueue);
     gettimeofday(&encodeStart, NULL);
 
+
+    timeval sliceStart, sliceEnd;
+    double sliceEncodeTime = 0.0;
     for (int i = 0; i < sliceNum; i++) {
         std::vector<const char*> sliceBufs;
         for (int j = 0; j < objIds.size(); j++) {
@@ -318,17 +331,24 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeFGTaskParallel(const std::
         }
         char* encodeBuf = new char[sliceSizeByte];                          // free after send task or persist task
         memset(encodeBuf, 0, sliceSizeByte);
+        gettimeofday(&sliceStart, NULL);
         RSPlan::encode(sliceBufs, encodeBuf, coefs, _conf->_rsParam.w, sliceSizeByte);
+        gettimeofday(&sliceEnd, NULL);
+        sliceEncodeTime += RedisUtil::duration(sliceStart, sliceEnd);
         encodeQueue->push(encodeBuf);
         // free sliceBufs
         for (int j = 0; j < objIds.size(); j++) {
             delete [] sliceBufs[j];
         }
-        LOG_INFO("execEncodeECTaskParallel, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, coefs: %s, sliceId: %d",
-                 filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, vec2String(coefs).c_str(), i);
     } 
 
     gettimeofday(&encodeEnd, NULL);
+    double encodeTime = RedisUtil::duration(encodeStart, encodeEnd);
+    // Record GF computation history data for overhead prediction
+    LOG_INFO("encodeTime: %f, sliceEncodeTime: %f", encodeTime, sliceEncodeTime);
+    recordGFComputationHistory(cpu_util, sliceNum, sliceNum * _conf->_sliceSize, sliceEncodeTime);
+
+
     LOG_INFO("execEncodeECTaskParallel done, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, coefs: %s, leftBound: %d, rightBound: %d, encode time: %f ms",
                 filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, vec2String(coefs).c_str(), leftBound, rightBound, RedisUtil::duration(encodeStart, encodeEnd)); 
     return {encodeStart, encodeEnd};                                     

@@ -25,10 +25,11 @@ public:
 
 
     unsigned int _localIp;
+    std::string _localIpStr;
     unsigned int _coorIp;
     int _agent_num;
     std::vector<unsigned int> _agent_ips;
-
+    int _node_id;
     int _pktSize;           // Byte
     int _objSize;           // MB
     int _sliceSize;         // MB
