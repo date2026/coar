@@ -1,17 +1,19 @@
 from util import stats
 from util import rs
-from crar import plan
+from coar_coarse import plan
 from redis import Redis
 import subprocess
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s [%(filename)s:%(lineno)d] %(levelname)s  - %(message)s'
+    format='%(asctime)s [%(pathname)s:%(lineno)d] %(levelname)s  - %(message)s'
 )
 
 # collect download, upload bandwidth, gf_bandwidth
 # generate a ecdag
 # return ecdag to dump to a file
+# node_ids start from 1
+# src_node_ids includes all surving nodes
 def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, obj_ids, object_size, ec_info, output, w, recorders):
     coor_connect = Redis(host="localhost", port=6379, db=0)
 
@@ -23,20 +25,42 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
     # failed_node_id = nd
 
     nd = failed_node_id
+    # collect bandwidths for src_node_ids/surving nodes
     download_bandwidths = [all_stats["download_bandwidth"][i - 1] for i in src_node_ids]
     upload_bandwidths = [all_stats["upload_bandwidth"][i - 1] for i in src_node_ids]
     gf_bandwidths = [all_stats["gf_bandwidth"][i - 1] for i in src_node_ids]
-    # gf_bandwidths = [10240.0 for i in src_node_ids]                                 # used by full repair
+
+    # get bandwidth for failed node/request/nd
+    nd_download_bandwidth = all_stats["download_bandwidth"][failed_node_id - 1]
+    nd_upload_bandwidth = all_stats["upload_bandwidth"][failed_node_id - 1]
+    nd_gf_bandwidth = all_stats["gf_bandwidth"][failed_node_id - 1]
 
     n, k, matrix = ReadECInfo(ec_info)                                              # read ec info from file
     logging.info(f"run, n: {n}, k: {k}, matrix: {matrix}")
     
-    # repair ratio and help ratio of all surviving nodes
-    repair_ratios, help_ratios = plan.solve_lp_problem(len(src_node_ids), k, object_size / 1024 / 1024, download_bandwidths, gf_bandwidths, upload_bandwidths)
-    logging.info(f"repair ratios: {repair_ratios}, help_ratios: {help_ratios}")
+
+
+    download_tasks, upload_tasks = plan.solve_ilp_problem(len(src_node_ids), k, object_size / 1024 / 1024, \
+    download_bandwidths + [nd_download_bandwidth], upload_bandwidths + [nd_upload_bandwidth], gf_bandwidths + [nd_gf_bandwidth])
+    logging.info(f"src_node_ids: {src_node_ids}, failed_node_id: {nd}, download_tasks: {download_tasks}, upload_tasks: {upload_tasks}")
+    node_download_tasks = {}
+    node_upload_tasks = {}
+    for i in range(len(src_node_ids)):
+        node_id = src_node_ids[i]
+        if (download_tasks[i] != 0):
+            node_download_tasks[node_id] = download_tasks[i]
+        if (upload_tasks[i] != 0):
+            node_upload_tasks[node_id] = upload_tasks[i]
+    node_download_tasks[failed_node_id] = download_tasks[-1]
+
+
+    logging.info(f"node_download tasks: {node_download_tasks}, node_upload_tasks: {node_upload_tasks}")
+
+    node_id_2_coefs = rs.GetCoefVector(matrix, all_node_ids, row_ids, node_upload_tasks.keys(), nd, k, 8)
+
 
     # generate ecdag according to repair ratio and help ratio
-    GenerateECDAGFG(all_node_ids, obj_ids, row_ids, nd, src_node_ids, repair_ratios, help_ratios, matrix, n, k, output)
+    GenerateECDAG(all_node_ids, obj_ids, row_ids, node_id_2_coefs, node_download_tasks, node_upload_tasks, nd, matrix, n, k, output)  
     
     # exec ec repair
     ExecECDAG(filename, failed_node_id, None, output)
@@ -142,150 +166,10 @@ def GenerateECDAGFG(all_node_ids, obj_ids, row_ids, nd, src_node_ids, repair_rat
     return 
 
     
-
-"""
-generate transmission plan for each slice
-repair and help means slice num node responsible for
-k means num of blocks a slice need from other node to repair, equally k - 1 in RS
-"""
-# allocate repair task from max
-def generate_repair_allocation(n, k, repair, help):
-    logging.info(f"generate repair allocation, src node num: {n}, help slice num to receive: {k}, repair ratio: {repair}, help ratio: {help}")
-    assert(len(repair) == n and len(help) == n)
-    assert(sum(repair) * k == sum(help))
-    
-    remaining_repair = repair.copy()
-    remaining_help = help.copy()
-    
-    distribution = [[0 for _ in range(n)] for _ in range(n)]
-    ec_plan = []
-    while True:
-        max_repair = -1
-        target_node = -1
-        
-        # select target node
-        for i in range(n):
-            if remaining_repair[i] > max_repair:
-                max_repair = remaining_repair[i]
-                target_node = i
-        
-        if max_repair == 0:
-            break
-        
-        # find k largest help nodes (not including target_node)
-        possible_helpers = []
-        for j in range(n):
-            if j != target_node and remaining_help[j] > 0:
-                possible_helpers.append((j, remaining_help[j]))
-        
-        possible_helpers.sort(key=lambda x: -x[1])
-
-        if (len(possible_helpers) < k):
-            logging.info(f"no enough helpers, unmateched repair: {sum(remaining_repair) / sum(repair)}")
-            break
-        
-
-        selected_helpers = possible_helpers[:k]
-        h = selected_helpers[-1][1]
-        
-        actual_h = min(h, remaining_repair[target_node])
-        logging.info(f"target node: {target_node}, selected helpers: {selected_helpers}, grain: {actual_h}")
-        
-        for j, _ in selected_helpers:
-            distribution[target_node][j] += actual_h
-            remaining_help[j] -= actual_h
-        remaining_repair[target_node] -= actual_h          
-
-        ec_plan.append((target_node, selected_helpers, actual_h))
-  
-    return ec_plan
-
-
-
 ################################################################################################################################################################
-
-# node_ids: new node id for repaired obj
-# stats: download and upload bandwidth of each node
-# jobs: already allocated download and upload tasks of each nodes
-def SelectNd(node_ids, object_size, stats, jobs):
-    logging.info(f"SelectNd, source node_ids: {node_ids}, jobs: {jobs}, stats: {stats}")
-    nd = -1
-    min_download_time = float("inf")
-    download_bandwidths = stats["download_bandwidth"]
-    for node_id in node_ids:
-        download_time = (jobs[node_id - 1] + 1) * (object_size) / download_bandwidths[node_id - 1]
-        if download_time < min_download_time:
-            min_download_time = download_time
-            nd = node_id
-    logging.info(f"SelectNd done, selected nd: {nd}")
-    return nd
-
-
-def SelectDownloadNode(node_ids, object_size, stats, download_tasks, upload_tasks, \
-                       k, nd, download_selector, upload_selector):
-    logging.info(f"SelectDownloadNode start, source node_ids: {node_ids}, with download_tasks: {download_tasks}, upload_tasks: {upload_tasks}, stats: {stats}")
-    
-    # one download task has been allocated to nd, now allocate k - 1 download tasks
-    for i in range(k - 1):
-        min_download_time = float("inf")
-        select = -1
-        # try nd
-        download_time = max(
-            upload_tasks[nd - 1] * object_size / stats["upload_bandwidth"][nd - 1],
-            (download_tasks[nd - 1] + 1) * (object_size) / stats["download_bandwidth"][nd - 1]
-        )
-        if download_time < min_download_time:
-            min_download_time = download_time
-            select = nd
-
-        # try node in node_ids(n - 1)
-        for node_id in node_ids:
-            if node_id in download_selector:                # already selected with a download task
-                download_time = max((upload_tasks[node_id - 1] + 1) * object_size / stats["upload_bandwidth"][node_id - 1],
-                                    (download_tasks[node_id - 1] + 1) * (object_size) / stats["download_bandwidth"][node_id - 1])
-            else:
-                download_time = max(upload_tasks[node_id - 1] * object_size / stats["upload_bandwidth"][node_id - 1],
-                                    (download_tasks[node_id - 1] + 1) * (object_size) / stats["download_bandwidth"][node_id - 1])
-            if download_time < min_download_time:
-                min_download_time = download_time
-                select = node_id
-        download_selector[select] = download_selector.get(select, 0) + 1
-        download_tasks[select - 1] += 1
-        if select != nd:
-            upload_tasks[select - 1] += 1
-            upload_selector[select] = upload_selector.get(select, 0) + 1
-
-        logging.info(f"SelectDownloadNode, for i.th: {i}, select {select}")
-        logging.info(f"after select, download_tasks: {download_tasks}, upload_tasks: {upload_tasks}")
-
-
-    logging.info(f"SelectDownloadNode done, selected download tasks: {download_tasks}, upload tasks: {upload_tasks}, \
-                 download selector: {download_selector}, upload selector: {upload_selector}")   
-
-
-# allocated remaining k - 1 upload tasks
-def SelectUploadNode(node_ids, object_size, stats, upload_tasks, download_tasks, upload_selector, k):
-    logging.info(f"SelectUploadNode, source node_ids: {node_ids}, upload_tasks: {upload_tasks}, upload_selector: {upload_selector}, stats: {stats}")
-    remain_upload_tasks_cnt = k - len(upload_selector)
-    for i in range(remain_upload_tasks_cnt):
-        select = -1
-        min_upload_time = float("inf")
-        for node_id in node_ids:
-            if node_id in upload_selector:
-                continue
-
-            upload_time = max((upload_tasks[node_id - 1] + 1) * object_size / stats["upload_bandwidth"][node_id - 1],
-                               download_tasks[node_id - 1] * object_size / stats["download_bandwidth"][node_id - 1])
-            if upload_time < min_upload_time:
-                min_upload_time = upload_time
-                select = node_id
-        upload_selector[select] = upload_selector.get(select, 0) + 1
-        upload_tasks[select - 1] += 1
-    logging.info(f"SelectUploadNode done, selected download tasks: {download_tasks}, upload tasks: {upload_tasks}")
 
 
 def GenerateECDAG(all_node_ids, obj_ids, row_ids, node_id_2_coefs, download_selector, upload_selector, nd, matrix, n, k, output):
-    logging.info(f"download_selector: {download_selector}, upload_selector: {upload_selector}")
 
     dag = {}
     for i in set(download_selector.keys()).union(set(upload_selector.keys())):
@@ -310,7 +194,7 @@ def GenerateECDAG(all_node_ids, obj_ids, row_ids, node_id_2_coefs, download_sele
             break
         
         nx = candidate_nodes.pop()
-        # select ny to download from nx
+
         download_selector[ny] -= 1
         if download_selector[ny] == 0:
             del download_selector[ny]
@@ -331,19 +215,8 @@ def GenerateECDAG(all_node_ids, obj_ids, row_ids, node_id_2_coefs, download_sele
     global_temp_obj_id = 2047
 
 
-    # dag = {
-    #     1: [],
-    #     3: [],
-    #     6: [],
-    #     4: [(1, 4), (3, 4)],
-    #     2: [(6, 2), (4, 2)]
-    # }
-    # nd = 2
-
-
     GetEdge(dag, nd, obj_ids, row_ids, node_id_2_coefs, nd, -1, result)
     logging.info(f"result: {result}")
-    # output to file
     DumpOutput(result, output)
     
     return 

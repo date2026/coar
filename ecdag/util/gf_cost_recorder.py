@@ -30,25 +30,20 @@ class GFCostRecorder:
 
     def predict(self, cpu_usage, w):
         '''
-        return gf bandwidth
+        return gf bandwidth (MB/s)
         '''
-        print(f"current records: {self.records}")
+        logging.info(f"predict, current cpu_usage: {cpu_usage}, current records: {self.records}")
         gf_bws = []
         for record in self.records:
             cpu_diff = abs(record["cpu_usage"] - cpu_usage)
             if cpu_diff <= self.cpu_threshold and record["w"] == w:
-                print("record: ", record)
-                result = {
-                    "blocks": record["blocks"],
-                    "block_size": record["block_size"],
-                    "time": record["time"]
-                }
-                gf_bws.append(record["time"] / (record["blocks"] * record["block_size"]))
+                gf_bws.append((record["blocks"] * record["block_size"]) / (record["time"] / 1000.0))
+                logging.info(f"hit, current_cpu_usage: {cpu_usage}, w: {w}, history_cpu_usage: {record['cpu_usage']}, blocks: {record['blocks']}, block_size: {record['block_size']}, time: {record['time']}, gf_bw: {gf_bws[-1]}")
         
         if gf_bws:
             return sum(gf_bws) / len(gf_bws)
         
-        return 0  
+        return 10240.0
 
 class GFCostRecorderArray:
     def __init__(self, node_num, cpu_threshold):
@@ -61,7 +56,7 @@ class GFCostRecorderArray:
         gf_bandwidths = []
         for node_id in range(self.node_num):
             gf_bandwidths.append(self.gf_cost_recorders[node_id].predict(cpu_usages[node_id], w))
-        
+            logging.info(f"predict gf bw for node: {node_id}: {gf_bandwidths[-1]} MB/s")
         return gf_bandwidths
 
     def RecordGFOverhead(self):
@@ -92,6 +87,4 @@ class GFCostRecorderArray:
             self.gf_cost_recorders[node_id].record(cpu_usage, w, blocks, block_size, time)
             logging.info(f"node_id: {node_id}, cpu_usage: {cpu_usage}, w: {w}, blocks: {blocks}, block_size: {block_size}, time: {time}")
 
-            for node_id in range(self.node_num):
-                print(f"node_id: {node_id}, record: {self.gf_cost_recorders[node_id].records}")
         return 

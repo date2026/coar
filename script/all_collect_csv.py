@@ -178,7 +178,7 @@ if __name__ == "__main__":
     plt.ylabel('cpu util(%)', fontsize=12)
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.6)
-    plt.savefig(f"{pic_dir}/cpu3_6_9.svg")
+    plt.savefig(f"{pic_dir}/cpu3_6_9.png")
     plt.close()
 
     x = list(range(1, step_num + 1))

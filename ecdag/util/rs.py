@@ -28,6 +28,7 @@ def invert_matrix_gf(matrix, k, gf_manager):
                 pivot = row
                 break
         if pivot is None:
+            return [row[k:] for row in augmented]
             raise ValueError("Matrix is singular.")
         
         # 交换行
@@ -99,18 +100,29 @@ def GetCoefVector(matrix, all_node_ids, row_ids, select_node_ids, target_node_id
 
 if __name__ == "__main__":
 
+    # matrix = [
+    #     [1, 0, 0, 0],
+    #     [0, 1, 0, 0],
+    #     [0, 0, 1, 0],
+    #     [0, 0, 0, 1],
+    #     [1, 1, 1, 1],
+    #     [1, 2, 4, 8]
+    # ]
     matrix = [
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-        [1, 1, 1, 1],
-        [1, 2, 4, 8]
+        [1,0,0,0,0,0],
+        [0,1,0,0,0,0],
+        [0,0,1,0,0,0], 
+        [0,0,0,1,0,0],
+        [0,0,0,0,1,0],
+        [0,0,0,0,0,1],
+        [1,1,1,1,1,1],
+        [1,2,4,8,16,32], 
+        [1,3,5,15,17,51]
     ]
-    survivors = [0, 2, 3, 5]  # 使用数据块0和校验块2来恢复数据块1
-    target_index = 1
-    k = 4
+    survivors = [0, 1, 2, 3, 4, 8]  # 使用数据块0和校验块2来恢复数据块1
+    target_index = 5
+    k = 6
     w = 8
     
     decode_vector = get_decode_vector(matrix, survivors, target_index, k, w)
-    print("解码向量:", decode_vector)
+    print("decode vector:", decode_vector)

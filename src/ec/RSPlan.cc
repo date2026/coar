@@ -17,7 +17,9 @@ RSPlan::RSPlan(Config* conf, FileMeta* fileMeta, const std::string& ecdagPath, i
     _n = n;
     _w = w;
     generateMatrix();
-    generateDecodeMatrix(survivedObjIds, failedObjId);
+    if (_conf->_ecPolicy == ECPolicy::CONV) {
+        generateDecodeMatrix(survivedObjIds, failedObjId);        
+    }
     setRSTasks();
 }
 

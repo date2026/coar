@@ -311,6 +311,7 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeFGTaskParallel(const std::
     LOG_INFO("execEncodeECTaskParallel start, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, coefs: %s, leftBound: %d, rightBound: %d",
              filename.c_str(), nodeId, objIds.size(), vec2String(objIds).c_str(), tmpObjId, vec2String(coefs).c_str(), leftBound, rightBound); 
     std::vector<BlockingQueue<char*>*> receiveQueues;
+    assert(objIds.size() == _conf->_rsParam.k);
     for (int i = 0; i < objIds.size(); i++) {
         int objId = objIds[i];
         BlockingQueue<char*>* queue = objBuffer->getObj(objId);             // pushed by receive task, content free by encode task, queue free by objBuffer
@@ -346,7 +347,7 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeFGTaskParallel(const std::
     double encodeTime = RedisUtil::duration(encodeStart, encodeEnd);
     // Record GF computation history data for overhead prediction
     LOG_INFO("encodeTime: %f, sliceEncodeTime: %f", encodeTime, sliceEncodeTime);
-    recordGFComputationHistory(cpu_util, sliceNum, sliceNum * _conf->_sliceSize, sliceEncodeTime);
+    recordGFComputationHistory(cpu_util, _conf->_rsParam.k, sliceNum * _conf->_sliceSize, sliceEncodeTime);
 
 
     LOG_INFO("execEncodeECTaskParallel done, filename: %s, nodeId: %d, objNum: %ld, objIds: %s, tmpObjId: %d, coefs: %s, leftBound: %d, rightBound: %d, encode time: %f ms",

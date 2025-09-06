@@ -1,10 +1,14 @@
 import docplex.mp.model as cpx
-
-SLICE_NUM = 16
+import logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(filename)s:%(lineno)d] %(levelname)s  - %(message)s'
+)
+SLICE_NUM = 4
 
 def solve_lp_problem(n, k, S, a, b, c):
     """
-    n: node num
+    n: src node num, surving node can used to repair
     k: 
     S: chunk size
     a: download bandwidth
@@ -14,13 +18,8 @@ def solve_lp_problem(n, k, S, a, b, c):
     y: help ratio
     """
 
-    """
-    TODO: 
-    modify download, gf, upload bandwidths to real
-    is three bandwidth all MB/s?
-    """
-    assert(len(a) == n)
-
+    logging.info(f"solve_lp_problem, download bandwidths: {a}, gf bandwidth: {b}, upload_bandwidth: {c}")
+    assert(len(a) == n and len(b) == n and len(c) == n)
 
     model = cpx.Model(name="node_allocation")
     
@@ -30,14 +29,15 @@ def solve_lp_problem(n, k, S, a, b, c):
     x = [xi / SLICE_NUM for xi in x_int]
     y = [yi / SLICE_NUM for yi in y_int]
     
+    # one node could not contribute more than one total chunk to responsible
     for i in range(n):
-        model.add_constraint(x_int[i] + y_int[i] <= 16, f"sum_xy_{i}_le_16")
+        model.add_constraint(x_int[i] + y_int[i] <= SLICE_NUM, f"sum_xy_{i}_le_16")
     
     
     # repair ratio constraint: x1 + x2 + ... + xn = 1
     model.add_constraint(model.sum(x) == 1, "sum_x")
 
-    # help ratio constraint: x1 + x2 + ... + xn = k
+    # help ratio constraint: x1 + x2 + ... + xn = k - 1
     model.add_constraint(model.sum(y) == k - 1, "sum_y")
     
     # max(O1, O2, ..., On)
@@ -78,7 +78,6 @@ def solve_lp_problem(n, k, S, a, b, c):
         
         x_values = [solution.get_value(xi) for xi in x]
         y_values = [solution.get_value(yi)  for yi in y]
-        print(x_values, y_values)
         return x_values, y_values
     else:
         assert (false and "no solution")

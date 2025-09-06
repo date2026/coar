@@ -6,6 +6,7 @@ from lmq import run as lmq_run
 from load_avg import run as load_avg_run
 import argparse
 from crar import run as crar_run
+from coar_coarse import run as coar_coarse_run
 from util import gf_cost_recorder
 import logging
 import threading
@@ -155,7 +156,7 @@ def parse_single_args(args_str):
     return parser.parse_args(args_list)
 
 WORKER_NUM = 9
-CPU_THRESHOLD = 5.0
+CPU_THRESHOLD = 10.0
 recorders = gf_cost_recorder.GFCostRecorderArray(WORKER_NUM, CPU_THRESHOLD)
 W = 8
 
@@ -192,6 +193,9 @@ if __name__ == "__main__":
                             parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
         elif parser.type == "crar":
             crar_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
+                            parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output, 8, recorders)
+        elif parser.type == "coar_coarse":
+            coar_coarse_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
                             parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output, 8, recorders)
         else:
             assert False and "undefined type"

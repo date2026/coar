@@ -18,7 +18,8 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
     download_jobs, upload_jobs = stats.CollectJobs()                                # job count of each node
     download_selector, upload_selector = {}, {}                                     # selected nodes for download and upload
     # select nd
-    nd = SelectNd(new_ids, object_size, all_stats, download_jobs)
+    # nd = SelectNd(new_ids, object_size, all_stats, download_jobs)
+    nd = failed_node_id
     failed_node_id = nd
     src_node_ids = all_node_ids.copy()
     src_node_ids.remove(nd)
