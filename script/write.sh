@@ -1,0 +1,1 @@
+/home/openec/coar/build/ECClient write /home/openec/coar/build/input_16MB_random /input_16MB rs_9_6_pool 16
