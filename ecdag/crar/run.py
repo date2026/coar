@@ -3,6 +3,7 @@ from util import rs
 from crar import plan
 from redis import Redis
 import subprocess
+import heapq
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -148,55 +149,93 @@ generate transmission plan for each slice
 repair and help means slice num node responsible for
 k means num of blocks a slice need from other node to repair, equally k - 1 in RS
 """
-# allocate repair task from max
+
+class RepairItem:
+    def __init__(self, size, node_id):
+        self.size = size
+        self.node_id = node_id
+    
+    def __lt__(self, other):
+        if self.size != other.size:
+            return self.size > other.size
+        else:
+            return self.node_id < other.node_id
+        
+class HelpItem:
+    def __init__(self, size, node_id):
+        self.size = size
+        self.node_id = node_id
+    
+    def __lt__(self, other):
+        if self.size != other.size:
+            return self.size > other.size
+        else:
+            return self.node_id > other.node_id
+
 def generate_repair_allocation(n, k, repair, help):
     logging.info(f"generate repair allocation, src node num: {n}, help slice num to receive: {k}, repair ratio: {repair}, help ratio: {help}")
     assert(len(repair) == n and len(help) == n)
     assert(sum(repair) * k == sum(help))
     
-    remaining_repair = repair.copy()
-    remaining_help = help.copy()
+    repair_queue = []
+    help_queue = []
+
+    for i in range(n):
+        heapq.heappush(repair_queue, RepairItem(repair[i], i))
+        heapq.heappush(help_queue, HelpItem(help[i], i))
     
     distribution = [[0 for _ in range(n)] for _ in range(n)]
     ec_plan = []
+       
     while True:
         max_repair = -1
-        target_node = -1
         
-        # select target node
-        for i in range(n):
-            if remaining_repair[i] > max_repair:
-                max_repair = remaining_repair[i]
-                target_node = i
+        # select target node 
+        repair_item = heapq.heappop(repair_queue)
+        max_repair = repair_item.size
+        target_node_id = repair_item.node_id
         
         if max_repair == 0:
             break
         
         # find k largest help nodes (not including target_node)
         possible_helpers = []
-        for j in range(n):
-            if j != target_node and remaining_help[j] > 0:
-                possible_helpers.append((j, remaining_help[j]))
+        self_item = None
+        for _ in range(n):
+            help_item = heapq.heappop(help_queue)
+            if help_item.node_id != target_node_id:
+                possible_helpers.append((help_item.node_id, help_item.size))
+            else:
+                self_item = help_item
+            if len(possible_helpers) == k:
+                break
+        if self_item is not None:
+            heapq.heappush(help_queue, self_item)
         
         possible_helpers.sort(key=lambda x: -x[1])
 
         if (len(possible_helpers) < k):
-            logging.info(f"no enough helpers, unmateched repair: {sum(remaining_repair) / sum(repair)}")
+            logging.info(f"no enough helpers")
             break
         
 
         selected_helpers = possible_helpers[:k]
         h = selected_helpers[-1][1]
         
-        actual_h = min(h, remaining_repair[target_node])
-        logging.info(f"target node: {target_node}, selected helpers: {selected_helpers}, grain: {actual_h}")
+        actual_h = min(h, max_repair)
+        logging.info(f"target node: {target_node_id}, selected helpers: {selected_helpers}, grain: {actual_h}")
         
-        for j, _ in selected_helpers:
-            distribution[target_node][j] += actual_h
-            remaining_help[j] -= actual_h
-        remaining_repair[target_node] -= actual_h          
+        for help_node_id, help_size in selected_helpers:
+            distribution[target_node_id][help_node_id] += actual_h
+            help_size -= actual_h
+            
+            if help_size != 0:
+                heapq.heappush(help_queue, HelpItem(help_size, help_node_id))
 
-        ec_plan.append((target_node, selected_helpers, actual_h))
+        repair_item.size -= actual_h
+        # if repair_item.size != 0:
+        heapq.heappush(repair_queue, repair_item)
+        ec_plan.append((target_node_id, selected_helpers, actual_h))
   
     return ec_plan
 

@@ -333,6 +333,8 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeFGTaskParallel(const std::
         char* encodeBuf = new char[sliceSizeByte];                          // free after send task or persist task
         memset(encodeBuf, 0, sliceSizeByte);
         gettimeofday(&sliceStart, NULL);
+        // #define MULTI_CHUNK_NUM 2
+        // for (int i = 0; i < MULTI_CHUNK_NUM; i++)
         RSPlan::encode(sliceBufs, encodeBuf, coefs, _conf->_rsParam.w, sliceSizeByte);
         gettimeofday(&sliceEnd, NULL);
         sliceEncodeTime += RedisUtil::duration(sliceStart, sliceEnd);

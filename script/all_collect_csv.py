@@ -9,6 +9,7 @@ remote_dir = "/root/lmq_openec/script/sysstat"
 local_dir = "/root/lmq_openec/script/sysstat/aggregated_data" 
 pic_dir = "/root/lmq_openec/script/sysstat/pic"  
 ssh_username = "root"  
+plt.rcParams['font.family'] = ['Times New Roman', 'serif']  
 
 step_num = 160
 Path(local_dir).mkdir(parents=True, exist_ok=True)
@@ -146,7 +147,7 @@ def aggregate_data():
     return node_stats
 
 if __name__ == "__main__":
-    fetch_remote_files()
+    # fetch_remote_files()
     
     results = aggregate_data()
     
@@ -170,16 +171,28 @@ if __name__ == "__main__":
 
 
     x = list(range(1, step_num + 1))
-    plt.figure(figsize=(30, 12))
-    subset_node_ids = [1, 2, 3, 7]
+    fig, ax = plt.subplots(figsize=(33, 22))  
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    # plt.figure(figsize=(30, 17))
+    subset_node_ids = [2, 6, 9]
     for node_id in subset_node_ids:
-        plt.plot(x, results[node_id - 1]["cpu"], marker = 'o', label = f'node0{node_id}')
-    plt.xlabel('time step', fontsize=12)
-    plt.ylabel('cpu util(%)', fontsize=12)
-    plt.legend()
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.savefig(f"{pic_dir}/cpu3_6_9.png")
+        plt.plot(x, results[node_id - 1]["cpu"], marker = 'o', label = f'node0{node_id}', markersize=8)
+    plt.xlabel('time step', fontsize=80)
+    plt.ylabel('cpu util(%)', fontsize=80)
+    plt.xticks(fontsize=80)
+    plt.yticks(fontsize=80)
+    # plt.legend(fontsize = 50)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05), ncol=3, fontsize=70, frameon=False, 
+          columnspacing=0.2, 
+          labelspacing=0.1, 
+          handlelength=1.0, 
+          handletextpad=0.2)
+    # plt.grid(True, linestyle='--', alpha=0.6)
+    plt.savefig(f"{pic_dir}/cpu3_6_9.pdf")
     plt.close()
+    exit(0)
+
 
     x = list(range(1, step_num + 1))
     plt.figure(figsize=(30, 12))
@@ -246,7 +259,7 @@ if __name__ == "__main__":
         x = list(range(1, step_num + 1))
         plt.figure(figsize=(30, 12))
         plt.plot(x, results[i - 1]["cpu"], marker = 'o', label = 'cpu')
-        plt.ylim(0, 60)
+        plt.ylim(0, 100)
         plt.xlabel('time step', fontsize=12)
         plt.ylabel('cpu util(%)', fontsize=12)
         plt.title('cpu util over time', fontsize=14)

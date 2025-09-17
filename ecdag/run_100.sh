@@ -1,3 +1,0 @@
-for i in {1..100}; do
-    python3 run_ecdag.py --type hpca25 --filename /input_1024MB --failed_node_id 4 --src_node_ids 1 2 3 4 5 6 7 8 9 --new_ids 1 2 3 4 5 6 7 8 9 --all_node_ids 1 2 3 4 5 6 7 8 9     --obj_ids 0 1 2 3 4089 4088 4087 4086 4085 --row_ids 1 2 3 4 5 6 7 8 9 --object_size 268435456 --ec_info /root/lmq_openec/build/ec_info     --output /root/lmq_openec/build/input_1024MB_ecdag_temp
-done
