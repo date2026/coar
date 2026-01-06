@@ -24,11 +24,12 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
     # failed_node_id = nd
 
     nd = failed_node_id
+    src_node_ids = all_node_ids.copy()
+    src_node_ids.remove(nd)
     download_bandwidths = [all_stats["download_bandwidth"][i - 1] for i in src_node_ids]
     upload_bandwidths = [all_stats["upload_bandwidth"][i - 1] for i in src_node_ids]
     gf_bandwidths = [all_stats["gf_bandwidth"][i - 1] for i in src_node_ids]
-    # gf_bandwidths = [10240.0 for i in src_node_ids]                                 # used by full repair
-
+    gf_bandwidths = [102400.0 for i in src_node_ids]                                 # used by full repair
     n, k, matrix = ReadECInfo(ec_info)                                              # read ec info from file
     logging.info(f"run, n: {n}, k: {k}, matrix: {matrix}")
     
@@ -159,7 +160,7 @@ class RepairItem:
         if self.size != other.size:
             return self.size > other.size
         else:
-            return self.node_id < other.node_id
+            return self.node_id > other.node_id
         
 class HelpItem:
     def __init__(self, size, node_id):
@@ -170,73 +171,123 @@ class HelpItem:
         if self.size != other.size:
             return self.size > other.size
         else:
-            return self.node_id > other.node_id
+            return self.node_id < other.node_id
 
 def generate_repair_allocation(n, k, repair, help):
     logging.info(f"generate repair allocation, src node num: {n}, help slice num to receive: {k}, repair ratio: {repair}, help ratio: {help}")
     assert(len(repair) == n and len(help) == n)
     assert(sum(repair) * k == sum(help))
     
-    repair_queue = []
-    help_queue = []
+    # repair_queue = []
+    # help_queue = []
 
-    for i in range(n):
-        heapq.heappush(repair_queue, RepairItem(repair[i], i))
-        heapq.heappush(help_queue, HelpItem(help[i], i))
+    # for i in range(n):
+    #     heapq.heappush(repair_queue, RepairItem(repair[i], i))
+    #     heapq.heappush(help_queue, HelpItem(help[i], i))
     
-    distribution = [[0 for _ in range(n)] for _ in range(n)]
-    ec_plan = []
+    # distribution = [[0 for _ in range(n)] for _ in range(n)]
+    # ec_plan = []
        
-    while True:
-        max_repair = -1
+    # while True:
+    #     max_repair = -1
         
-        # select target node 
-        repair_item = heapq.heappop(repair_queue)
-        max_repair = repair_item.size
-        target_node_id = repair_item.node_id
+    #     # select target node 
+    #     repair_item = heapq.heappop(repair_queue)
+    #     max_repair = repair_item.size
+    #     target_node_id = repair_item.node_id
         
-        if max_repair == 0:
-            break
+    #     if max_repair == 0:
+    #         break
         
-        # find k largest help nodes (not including target_node)
-        possible_helpers = []
-        self_item = None
-        for _ in range(n):
-            help_item = heapq.heappop(help_queue)
-            if help_item.node_id != target_node_id:
-                possible_helpers.append((help_item.node_id, help_item.size))
-            else:
-                self_item = help_item
-            if len(possible_helpers) == k:
-                break
-        if self_item is not None:
-            heapq.heappush(help_queue, self_item)
+    #     # find k largest help nodes (not including target_node)
+    #     possible_helpers = []
+    #     self_item = None
+    #     for _ in range(n):
+    #         help_item = heapq.heappop(help_queue)
+    #         if help_item.node_id != target_node_id:
+    #             possible_helpers.append((help_item.node_id, help_item.size))
+    #         else:
+    #             self_item = help_item
+    #         if len(possible_helpers) == k:
+    #             break
+    #     if self_item is not None:
+    #         heapq.heappush(help_queue, self_item)
         
-        possible_helpers.sort(key=lambda x: -x[1])
+    #     possible_helpers.sort(key=lambda x: -x[1])
 
-        if (len(possible_helpers) < k):
-            logging.info(f"no enough helpers")
-            break
+    #     if (len(possible_helpers) < k):
+    #         logging.info(f"no enough helpers")
+    #         break
         
 
-        selected_helpers = possible_helpers[:k]
-        h = selected_helpers[-1][1]
+    #     selected_helpers = possible_helpers[:k]
+    #     h = selected_helpers[-1][1]
         
-        actual_h = min(h, max_repair)
-        logging.info(f"target node: {target_node_id}, selected helpers: {selected_helpers}, grain: {actual_h}")
+    #     actual_h = min(h, max_repair)
+    #     logging.info(f"target node: {target_node_id}, selected helpers: {selected_helpers}, grain: {actual_h}")
         
-        for help_node_id, help_size in selected_helpers:
-            distribution[target_node_id][help_node_id] += actual_h
-            help_size -= actual_h
+    #     for help_node_id, help_size in selected_helpers:
+    #         distribution[target_node_id][help_node_id] += actual_h
+    #         help_size -= actual_h
             
-            if help_size != 0:
-                heapq.heappush(help_queue, HelpItem(help_size, help_node_id))
+    #         if help_size != 0:
+    #             heapq.heappush(help_queue, HelpItem(help_size, help_node_id))
 
-        repair_item.size -= actual_h
-        # if repair_item.size != 0:
-        heapq.heappush(repair_queue, repair_item)
-        ec_plan.append((target_node_id, selected_helpers, actual_h))
+    #     repair_item.size -= actual_h
+    #     # if repair_item.size != 0:
+    #     heapq.heappush(repair_queue, repair_item)
+    #     ec_plan.append((target_node_id, selected_helpers, actual_h))
   
+    # return ec_plan
+
+
+    tasks = []
+    for i in range(n):
+        for _ in range(repair[i]):
+            tasks.append(i)
+    
+    current_help = list(help)
+    ec_plan = []
+    distribution = [[0 for _ in range(n)] for _ in range(n)]
+
+    for step_idx, target_node in enumerate(tasks):
+        
+        candidates = []
+        
+        future_tasks = tasks[step_idx+1:]
+        
+        for h_id in range(n):
+            if h_id == target_node: continue
+            if current_help[h_id] <= 0: continue
+        
+            future_opps = sum(1 for t in future_tasks if t != h_id)
+            total_opps = 1 + future_opps
+            
+            slack = total_opps - current_help[h_id]
+            
+            candidates.append({
+                'id': h_id,
+                'slack': slack,
+                'size': current_help[h_id]
+            })
+        
+        if len(candidates) < k:
+            logging.error(f"FAILURE at step {step_idx} (Target {target_node}): Needs {k}, found {len(candidates)}")
+            return []
+
+        candidates.sort(key=lambda x: (x['slack'], -x['size'], x['id']))
+        
+        selected = candidates[:k]
+        selected_ids = [(c['id'], c['size']) for c in selected]
+        
+        for item in selected:
+            h_id = item['id']
+            current_help[h_id] -= 1
+            distribution[target_node][h_id] += 1
+            
+        ec_plan.append((target_node, selected_ids, 1))
+        logging.info(f"Step {step_idx}: Target {target_node} used {selected_ids}")
+
     return ec_plan
 
 

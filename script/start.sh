@@ -1,6 +1,8 @@
 #!/bin/bash
 
-NODE_NUM=9
+# NODE_NUM=9
+NODE_NUM=31
+# NODE_NUM=63
 NODE_NAME=node
 USER=root
 DIR=/root/lmq_openec

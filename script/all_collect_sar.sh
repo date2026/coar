@@ -1,6 +1,6 @@
 #!/bin/bash
 
-host_num=9
+host_num=31
 USER=root
 NODE_NAME=node
 DIR=/root/lmq_openec

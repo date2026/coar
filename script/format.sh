@@ -3,8 +3,9 @@
 USER=root
 HOME=/home/$USER
 NODE_NAME=node
-NODE_NUM=9
-
+# NODE_NUM=9
+NODE_NUM=31
+# NODE_NUM=63
 stop-dfs.sh
 rm -rf /root/hadoop-3.0.0-src/hadoop-dist/target/hadoop-3.0.0/data
 for((i=1;i<=$NODE_NUM;i++));

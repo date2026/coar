@@ -820,22 +820,45 @@ void ECWorker::execECTasksParallel(AGCommand* agCmd) {
     ConcurrentMap timeMap;
     double sendTime = 0.0, receiveTime = 0.0, encodeTime = 0.0, persistTime = 0.0;
     std::thread execThds[taskNum];
+#ifdef USE_GRPC
+    std::thread grpcSvrThd;
+    std::shared_ptr<grpc::Server> grpcSvr;
+    std::thread grpcThd = std::thread([this, &tasks, objBuffer, &grpcSvrThd](){ 
+        startGRPCService(tasks, objBuffer, grpcSvrThd); 
+    });
+#else
     httplib::Server svr;
     std::thread svrThd;             // thd for svr to listen
     std::thread httpThd = std::thread([this, &svr, &tasks, &svrThd](){ startHttpService(svr, tasks, svrThd); });
+#endif
     for (int i = 0; i < taskNum; i++) {
         switch (tasks[i]->_type) {
             case ECTaskType::SEND:
+#ifdef USE_GRPC
+            execThds[i] = std::thread([=, &grpcSvr, &timeMap](){
+                auto ret = execSendECTaskParallelWithGRPC(filename, tasks[i], objBuffer, grpcSvr);
+                timeMap.setTime(i, ret);
+            });
+
+#else
                 execThds[i] = std::thread([=, &svr, &timeMap](){
                     auto ret = execSendECTaskParallel(filename, tasks[i], objBuffer, svr);
                     timeMap.setTime(i, ret);
                 });
+#endif
                 break;
             case ECTaskType::RECEIVE:
+#ifdef USE_GRPC
+                execThds[i] = std::thread([=, &timeMap](){
+                    auto ret = execReceiveECTaskParallelWithGRPC(filename, tasks[i], objBuffer);
+                    timeMap.setTime(i, ret);
+                });
+#else
                 execThds[i] = std::thread([=, &timeMap](){
                     auto ret = execReceiveECTaskParallel(filename, tasks[i], objBuffer);
                     timeMap.setTime(i, ret);
                 });
+#endif
                 break;
             case ECTaskType::ENCODE:
             case ECTaskType::ENCODE_PARTIAL:
@@ -864,6 +887,17 @@ void ECWorker::execECTasksParallel(AGCommand* agCmd) {
     for (int i = 0; i < taskNum; i++) {     // clean thds to do fetch, send, receive, encode, persist 
         execThds[i].join();
     }
+#ifdef USE_GRPC
+    
+    std::lock_guard<std::mutex> lock(_grpcServerMutex);
+    if (_grpcServer) {
+        LOG_INFO("Shutting down gRPC server");
+        _grpcServer->Shutdown();
+        _grpcServer.reset();
+    }
+
+    grpcThd.join();  // Wait for startGRPCService thread to complete
+#else
     if (svr.is_running()) {                 // if this node has send task, stop http svr, clean svrThd
         svr.stop();
         svrThd.join();
@@ -871,6 +905,7 @@ void ECWorker::execECTasksParallel(AGCommand* agCmd) {
     httpThd.join();
 
 
+#endif
     printTime(timeMap, taskNum, tasks);
 
     // 3. send encode done to coordinator
@@ -987,6 +1022,14 @@ std::pair<timeval, timeval> ECWorker::execReceiveECTaskParallel(const std::strin
                                     std::to_string(dstNodeId) + "_" + std::to_string(objId);
     // TODO: get ready flag from sender
     // 1. receive data and start time from sender 
+    {
+        redisContext* receiveObjCtx = RedisUtil::createContext(_conf->_agent_ips[srcNodeId]);
+        redisReply* receiveObjReply = (redisReply*)redisCommand(receiveObjCtx, "blpop startHttpService 0");
+		assert(receiveObjReply != NULL && receiveObjReply -> type == REDIS_REPLY_ARRAY 
+            && receiveObjReply -> elements == 2);        
+        freeReplyObject(receiveObjReply);
+        redisFree(receiveObjCtx);
+    }
     Client cli(RedisUtil::ip2Str(_conf->_agent_ips[srcNodeId]).c_str(), 8080);
     
     do {
@@ -1001,6 +1044,8 @@ std::pair<timeval, timeval> ECWorker::execReceiveECTaskParallel(const std::strin
             memcpy(obj, res->body.data() + sizeof(timeval), objSizeByte);
             objBuffer->insertObj(tmpObjId, obj);
             break;
+        } else {
+            LOG_INFO("try to get %s", RedisUtil::ip2Str(_conf->_agent_ips[srcNodeId]).c_str());
         }
     } while (true);
 
@@ -1014,6 +1059,7 @@ std::pair<timeval, timeval> ECWorker::execReceiveECTaskParallel(const std::strin
     // gettimeofday(&receiveEnd, NULL);
     LOG_INFO("execReceiveECTaskParallel done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d, receive time: %f ms", 
              filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId, RedisUtil::duration(receiveStart, receiveEnd));
+    LOG_INFO("receiveStart: %ld s %ld us, receiveEnd: %ld s %ld us", receiveStart.tv_sec, receiveStart.tv_usec, receiveEnd.tv_sec, receiveEnd.tv_usec);
     return {receiveStart, receiveEnd};
 }
 
@@ -1100,6 +1146,17 @@ void ECWorker::startHttpService(httplib::Server& svr, const std::vector<ECTask*>
 		svr.listen("0.0.0.0", 8080);
     });
 
+    // struct timeval startHttpServiceStart;
+    // gettimeofday(&startHttpServiceStart, NULL);
+    for (const auto& task : tasks) {
+        if (task->_type == ECTaskType::SEND) {
+            redisReply* startHttpServiceReply = (redisReply*)redisCommand(startHttpServiceCtx, "rpush %s 0", "startHttpService");
+            // redisReply* startHttpServiceReply = (redisReply*)redisCommand(startHttpServiceCtx, "rpush %s %b", "startHttpService", &startHttpServiceStart, sizeof(startHttpServiceStart));
+            assert(startHttpServiceReply != NULL && startHttpServiceReply->type == REDIS_REPLY_INTEGER);
+            freeReplyObject(startHttpServiceReply);
+        }
+    }
+    LOG_INFO("sender nodify its all receiver done");
     redisFree(startHttpServiceCtx);
 }
 
@@ -1205,3 +1262,90 @@ double ECWorker::getCurrentCPUUtilization() {
     freeReplyObject(reply);
     return cpu_util;
 }
+
+#ifdef USE_GRPC
+void ECWorker::startGRPCService(const std::vector<ECTask*>& tasks, ObjParallelBuffer* objBuffer, std::thread& svrThd) {
+
+    GreeterServiceImpl service(objBuffer);  // Pass objBuffer to service
+    ServerBuilder builder;
+    builder.AddListeningPort("0.0.0.0:50051", grpc::InsecureServerCredentials());
+    builder.RegisterService(&service);
+    std::unique_ptr<grpc::Server> serverUnique = builder.BuildAndStart();
+    std::shared_ptr<grpc::Server> server(serverUnique.release());
+    LOG_INFO("gRPC server started and listening on 0.0.0.0:50051");
+
+    {
+        std::lock_guard<std::mutex> lock(_grpcServerMutex);
+        _grpcServer = server;
+    }
+
+    svrThd = std::thread([server](){
+        server->Wait();    
+    });
+    svrThd.join();
+}
+
+/**
+ * read obj from objbuffer, send to requestor by http
+ */
+ std::pair<timeval, timeval> ECWorker::execSendECTaskParallelWithGRPC(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer, std::shared_ptr<grpc::Server> svr) {
+    const int nodeId = task->_nodeId;
+    const int srcNodeId = task->_srcNodeId;
+    const int dstNodeId = task->_dstNodeId;
+    const int objId = task->_objId;
+    struct timeval sendStart, sendEnd;
+
+    LOG_INFO("execSendECTaskParallelWithGRPC start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d", 
+        filename.c_str(), nodeId, srcNodeId, dstNodeId, objId);
+
+    const std::string key = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
+                            std::to_string(dstNodeId) + "_" + std::to_string(objId);
+    
+    // wait for receiver flag
+    redisContext* wait4ReceiverCtx = RedisUtil::createContext(_conf->_localIp);
+    assert(wait4ReceiverCtx != NULL);
+    redisReply* wait4ReceiverReply = (redisReply*)redisCommand(wait4ReceiverCtx, "blpop %s 0", key.c_str());
+    assert(wait4ReceiverReply != NULL && wait4ReceiverReply->type == REDIS_REPLY_ARRAY && wait4ReceiverReply->elements == 2);
+    freeReplyObject(wait4ReceiverReply);
+    redisFree(wait4ReceiverCtx);
+    LOG_INFO("execSendECTaskParallelWithGRPC receive flag from dstNodeId: %d, objId: %d", dstNodeId, objId);
+
+    LOG_INFO("execSendECTaskParallelWithGRPC done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, time: %f ms", 
+        filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, RedisUtil::duration(sendStart, sendEnd));
+    return {sendStart, sendEnd};
+}
+
+/**
+* receive obj by http, insert to objBuffer
+*/
+std::pair<timeval, timeval> ECWorker::execReceiveECTaskParallelWithGRPC(const std::string& filename, const ECTask* task, ObjParallelBuffer* objBuffer) {
+    const int nodeId = task->_nodeId;
+    const int dstNodeId = task->_dstNodeId;
+    const int srcNodeId = task->_srcNodeId;
+    const int objId = task->_objId;
+    const int tmpObjId = task->_tmpObjId;
+    struct timeval receiveStart, receiveEnd;
+    LOG_INFO("execReceiveECTaskParallelWithGRPC start, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d", 
+        filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId);
+    const std::string receiveObjKey = filename + "_send_" + std::to_string(srcNodeId) + "_" + 
+    std::to_string(dstNodeId) + "_" + std::to_string(objId);
+
+    std::string target_str = RedisUtil::ip2Str(_conf->_agent_ips[srcNodeId]) + ":50051";
+    GreeterClient greeter(grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
+    std::string user("world");
+    std::string reply = greeter.SayHello(user);
+
+
+    // 3. send reply to sender
+    redisContext* receiveObjCtx = RedisUtil::createContext(_conf->_agent_ips[srcNodeId]);
+    redisReply* receiveObjReply = (redisReply*)redisCommand(receiveObjCtx, "rpush %s 1", receiveObjKey.c_str());
+    assert(receiveObjReply != NULL && receiveObjReply->type == REDIS_REPLY_INTEGER);
+    freeReplyObject(receiveObjReply);
+    redisFree(receiveObjCtx);
+
+    LOG_INFO("execReceiveECTaskParallelWithGRPC done, filename: %s, nodeId: %d, srcNodeId: %d, dstNodeId: %d, objId: %d, tmpObjId: %d, receive time: %f ms", 
+    filename.c_str(), nodeId, srcNodeId, dstNodeId, objId, tmpObjId, RedisUtil::duration(receiveStart, receiveEnd));
+    return {receiveStart, receiveEnd};
+}
+
+#endif

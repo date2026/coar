@@ -32,7 +32,8 @@ public:
     int _node_id;
     int _pktSize;           // Byte
     int _objSize;           // MB
-    int _sliceSize;         // MB
+    // int _sliceSize;         // MB
+    double _sliceSize;      // MB
     int _agWorkerThreadNum;
     int _coorThreadNum;
     int _distThreadNum;

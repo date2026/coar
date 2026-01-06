@@ -33,7 +33,8 @@ Config::Config(const std::string& file_path) {
     _fsParam = conf.at("fs_param").get<std::vector<std::string>>();
     _pktSize = conf.at("pkt_size").get<int>();
     _objSize = conf.at("obj_size").get<int>();
-    _sliceSize = conf.at("slice_size").get<int>();
+    // _sliceSize = conf.at("slice_size").get<int>();
+    _sliceSize = conf.at("slice_size").get<double>();
     _agWorkerThreadNum = conf.at("agent_worker_thread_num").get<int>();
     _coorThreadNum = conf.at("coordinator_thread_num").get<int>();
 

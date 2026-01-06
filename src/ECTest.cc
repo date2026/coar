@@ -1,16 +1,30 @@
 #include "util/jerasure.h"
 #include "inc/include.hh"
 
+const size_t LLC_SIZE_THRESHOLD = 1000 * 1024 * 1024; // 100 MB
+
+void flush_cpu_cache() {
+
+    std::vector<int> dummy_data(LLC_SIZE_THRESHOLD / sizeof(int), 1);
+
+    
+    volatile int* p = dummy_data.data();
+    size_t len = dummy_data.size();
+
+    for (size_t i = 0; i < len; ++i) {
+        p[i] = p[i] + 1;
+    }
+    __sync_synchronize(); 
+}
+
 int main() {
-    // long long fileSizeByte = 1536 * 1024 * 1024;
-    // long long fileSizeByte = 3221225472;
-    long long fileSizeByte = 6442450944;
-    const std::string filePath = "/root/lmq_openec/build/input_6144MB_random";
+    long long fileSizeByte = 640 * 1024 * 1024;
+    const std::string filePath = "/root/lmq_openec/build/input_640MB_random";
     FILE* inputfile = fopen(filePath.c_str(), "rb");
     assert(inputfile != NULL && "Failed to open file");
-    int k = 6;
-    int m = 3;
-    int n = 9;
+    int k = 10;
+    int m = 5;
+    int n = 15;
     int w = 8;
     int objSizeByte = fileSizeByte / k;
     char** data_ptrs = new char* [k];
@@ -43,178 +57,32 @@ int main() {
     // matrix: m * k
 
 
-    // encode 2
-    int* encodeMatrix = matrix + (k + 2) * k;
+    int* encodeMatrix;
     timeval start, end;
     double time = 0;
 
-    // for (int i = 0; i < 10; i++) {
-    //     gettimeofday(&start, NULL);
-    //     jerasure_matrix_encode(2, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
-    //     gettimeofday(&end, NULL);
-    //     time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    // }
-    // printf("size: %d, multy: 2, time: %f ms\n", objSizeByte, time / 10.0);
-// #define THDS_NUM 2
-
-//     std::thread thds[THDS_NUM];
-
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id] = std::thread([=](){
-//             timeval start, end;
-//             double time = 0.0;
-//             for (int i = 0; i < 10; i++) {
-//                 gettimeofday(&start, NULL);
-//                 jerasure_matrix_encode(6, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
-//                 gettimeofday(&end, NULL);
-//                 time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-//             }
-//             printf("size: %d, multy: 6, time: %f ms\n", objSizeByte, time / 10.0);
-//         });
-//     }
-    
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id].join();
-//     }
-    
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id] = std::thread([=](){
-//             timeval start, end;
-//             double time = 0.0;
-//             for (int i = 0; i < 10; i++) {
-//                 gettimeofday(&start, NULL);
-//                 jerasure_matrix_encode(5, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
-//                 gettimeofday(&end, NULL);
-//                 time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-//             }
-//             printf("size: %d, multy: 5, time: %f ms\n", objSizeByte, time / 10.0);
-//         });
-//     }
-    
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id].join();
-//     }
-
-
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id] = std::thread([=](){
-//             timeval start, end;
-//             double time = 0.0;
-//             for (int i = 0; i < 10; i++) {
-//                 gettimeofday(&start, NULL);
-//                 jerasure_matrix_encode(4, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
-//                 gettimeofday(&end, NULL);
-//                 time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-//             }
-//             printf("size: %d, multy: 4, time: %f ms\n", objSizeByte, time / 10.0);
-//         });
-//     }
-    
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id].join();
-//     }
-
-
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id] = std::thread([=](){
-//             timeval start, end;
-//             double time = 0.0;
-//             for (int i = 0; i < 10; i++) {
-//                 gettimeofday(&start, NULL);
-//                 jerasure_matrix_encode(3, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
-//                 gettimeofday(&end, NULL);
-//                 time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-//             }
-//             printf("size: %d, multy: 3, time: %f ms\n", objSizeByte, time / 10.0);
-//         });
-//     }
-    
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id].join();
-//     }
-
-
-
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id] = std::thread([=](){
-//             timeval start, end;
-//             double time = 0.0;
-//             for (int i = 0; i < 10; i++) {
-//                 gettimeofday(&start, NULL);
-//                 jerasure_matrix_encode(2, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
-//                 gettimeofday(&end, NULL);
-//                 time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-//             }
-//             printf("size: %d, multy: 2, time: %f ms\n", objSizeByte, time / 10.0);
-//         });
-//     }
-    
-//     for (int thd_id = 0; thd_id < THDS_NUM; thd_id++) {
-//         thds[thd_id].join();
-//     }
-
-
-
-/************************************************************************************************************ */
-
-    encodeMatrix = matrix + (k + 2) * k;
-    time = 0.0;
-    for (int i = 0; i < 10; i++) {
-        gettimeofday(&start, NULL);
-        jerasure_matrix_encode(k, 1, w, encodeMatrix, data_ptrs, coding_ptrs, objSizeByte);
-        gettimeofday(&end, NULL);
-        time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    }
-    printf("size: %d, multy: 6, time: %f ms\n", objSizeByte, time / 10.0);
-
-
-    // printf("print encode matrix\n");
-    // for (int i = 0; i < k; i++) {
-    //     printf("%d ", encodeMatrix[i]);
-    // }
-    // printf("\n");
-
-    // ================================================================
-    // decode for k - 1 erasure
     int* selectMatrix = new int [k * k];
     memcpy(selectMatrix + 0 * k, matrix + 0 * k, k * sizeof(int));
     memcpy(selectMatrix + 1 * k, matrix + 2 * k, k * sizeof(int));
     memcpy(selectMatrix + 2 * k, matrix + 3 * k, k * sizeof(int));
     memcpy(selectMatrix + 3 * k, matrix + 4 * k, k * sizeof(int));
     memcpy(selectMatrix + 4 * k, matrix + 5 * k, k * sizeof(int));
-    memcpy(selectMatrix + 5 * k, matrix + 8 * k, k * sizeof(int));
+    memcpy(selectMatrix + 5 * k, matrix + 6 * k, k * sizeof(int));
+    memcpy(selectMatrix + 6 * k, matrix + 7 * k, k * sizeof(int));
+    memcpy(selectMatrix + 7 * k, matrix + 8 * k, k * sizeof(int));
+    memcpy(selectMatrix + 8 * k, matrix + 9 * k, k * sizeof(int));
+    memcpy(selectMatrix + 9 * k, matrix + 14 * k, k * sizeof(int));
 
-    // printf("print select matrix\n");
-    // for (int i = 0; i < k; i++) {
-    //     for (int j = 0; j < k; j++) {
-    //         printf("%d ", selectMatrix[i * k + j]);
-    //     }
-    //     printf("\n");
-    // }
     int* invertMatrix = new int [k * k];
     jerasure_invert_matrix(selectMatrix, invertMatrix, k, w);
-    // printf("print invert matrix\n");
-    // for (int i = 0; i < k; i++) {
-    //     for (int j = 0; j < k; j++) {
-    //         printf("%d ", invertMatrix[i * k + j]);
-    //     }
-    //     printf("\n");
-    // }
-    // copy k - 1
     int* selectVector = new int [k];
-    memcpy(selectVector, matrix + 5 * k, k * sizeof(int));
-
-    // memcpy(selectVector, matrix + (k - 1) * k, k * sizeof(int));
+    memcpy(selectVector, matrix + 1 * k, k * sizeof(int));
 
     int* coefVector = jerasure_matrix_multiply(selectVector, invertMatrix, 1, k, k, k, w);
-    // printf("print coefVector\n");
-    // for (int i = 0; i < k; i++) {
-    //     printf("%d ", coefVector[i]);
-    // }
-    // printf("\n");
 
     // data needed to decode
-    char* data_ptrs_4_decode[] = {data_ptrs[0], data_ptrs[2], data_ptrs[3], data_ptrs[4], data_ptrs[5], coding_ptrs[0]};
+    char* data_ptrs_4_decode[] = {data_ptrs[0], data_ptrs[2], data_ptrs[3], data_ptrs[4], data_ptrs[5], \
+                                  data_ptrs[6], data_ptrs[7], data_ptrs[8], data_ptrs[9], coding_ptrs[0]};
     // decode result
     char** coding_ptrs_4_decode = new char* [1];
     coding_ptrs_4_decode[0] = new char [objSizeByte];
@@ -223,88 +91,38 @@ int main() {
     char* coding_ptrs_tmp_0 = new char [objSizeByte];
     char* coding_ptrs_tmp_1 = new char [objSizeByte];
 
-    int matrix_tmp_0[] = {244, 3, 5};
-    int matrix_tmp_1[] = {15, 17, 244};
-    int matrix_tmp_2[] = {1, 1};
-
-    // time = 0;
-    // for (int i = 0; i < 10; i++) {
-    //     gettimeofday(&start, NULL);
-    //     jerasure_matrix_encode(2, 1, w, matrix_tmp_0, data_ptrs_4_decode, coding_ptrs_4_decode, objSizeByte);
-    //     gettimeofday(&end, NULL);
-    //     time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    // }
-    // printf("size: %d, multy: 2, time: %f ms\n", objSizeByte, time / 10.0);
-
-    int matrix_tmp_5[] = {244, 3, 5, 15, 17, 244};
+    int matrix_tmp_5[] = {139, 22, 88, 125, 233, 131, 54, 216, 71, 139};
     time = 0;
-    for (int i = 0; i < 10; i++) {
+    int item_num = 1;
+    for (int iter = 0; iter < item_num; iter++) {
+        flush_cpu_cache();
         gettimeofday(&start, NULL);
-        jerasure_matrix_encode(6, 1, w, matrix_tmp_5, data_ptrs_4_decode, coding_ptrs_4_decode, objSizeByte);
-        gettimeofday(&end, NULL);
-        time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    }
-    printf("size: %d, multy: 6, time: %f ms\n", objSizeByte, time / 10.0);
-
-
-    int matrix_tmp_4[] = {244, 3, 5, 15, 17};
-    time = 0;
-    for (int i = 0; i < 10; i++) {
-        gettimeofday(&start, NULL);
-        jerasure_matrix_encode(5, 1, w, matrix_tmp_4, data_ptrs_4_decode, coding_ptrs_4_decode, objSizeByte);
-        gettimeofday(&end, NULL);
-        time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    }
-    printf("size: %d, multy: 5, time: %f ms\n", objSizeByte, time / 10.0);
-    
-    
-    int matrix_tmp_3[] = {244, 3, 5, 15};
-    time = 0;
-    for (int i = 0; i < 10; i++) {
-        gettimeofday(&start, NULL);
-        jerasure_matrix_encode(4, 1, w, matrix_tmp_3, data_ptrs_4_decode, coding_ptrs_4_decode, objSizeByte);
-        gettimeofday(&end, NULL);
-        time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    }
-    printf("size: %d, multy: 4, time: %f ms\n", objSizeByte, time / 10.0);
-
-
-    time = 0;
-    for (int i = 0; i < 10; i++) {
-        gettimeofday(&start, NULL);
-        jerasure_matrix_encode(3, 1, w, matrix_tmp_0, data_ptrs_4_decode, coding_ptrs_4_decode, objSizeByte);
-        gettimeofday(&end, NULL);
-        time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    }
-    printf("size: %d, multy: 3, time: %f ms\n", objSizeByte, time / 10.0);
-    memcpy(coding_ptrs_tmp_0, coding_ptrs_4_decode[0], objSizeByte);
-
-    time = 0;
-    for (int i = 0; i < 10; i++) {
-        gettimeofday(&start, NULL);
-        jerasure_matrix_encode(3, 1, w, matrix_tmp_1, data_ptrs_4_decode + 3, coding_ptrs_4_decode, objSizeByte);
-        gettimeofday(&end, NULL);
-        time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    }
-    printf("size: %d, multy: 3, time: %f ms\n", objSizeByte, time / 10.0);
-    memcpy(coding_ptrs_tmp_1, coding_ptrs_4_decode[0], objSizeByte);
-
-    char* coding_ptrs_4_decode_tmp[] = {coding_ptrs_tmp_0, coding_ptrs_tmp_1};
-    time = 0;
-    for (int i = 0; i < 10; i++) {
-        gettimeofday(&start, NULL);
-        jerasure_matrix_encode(2, 1, w, matrix_tmp_2, coding_ptrs_4_decode_tmp, coding_ptrs_4_decode, objSizeByte);
-        gettimeofday(&end, NULL);
-        time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    }
-    printf("size: %d, multy: 2, time: %f ms\n", objSizeByte, time / 10.0);
-
-    // compare
-    for (int i = 0; i < objSizeByte; i++) {
-        if (coding_ptrs_4_decode[0][i] != data_ptrs[1][i]) {
-            printf("conv decode error\n");
-            break;
+        char** data_ptrs = (char**)malloc(k * sizeof(char*));
+        char** coding_ptrs = (char**)malloc(1 * sizeof(char*));
+        for (int i = 0; i < k; i++) {
+            data_ptrs[i] = (char*)malloc(objSizeByte * sizeof(char));
+            memcpy(data_ptrs[i], data_ptrs_4_decode[i], objSizeByte);
         }
+        coding_ptrs[0] = (char*)malloc(objSizeByte * sizeof(char));
+        
+        
+        // decode
+        jerasure_matrix_encode(k, 1, w, matrix_tmp_5, data_ptrs, coding_ptrs, objSizeByte);
+
+        memcpy(coding_ptrs_4_decode[0], coding_ptrs[0], objSizeByte);        
+        gettimeofday(&end, NULL);
+        time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
+    
+        for (int i = 0; i < k; i++) {
+            free(data_ptrs[i]);
+        }
+        free(data_ptrs);
+        for (int i = 0; i < 1; i++) {
+            free(coding_ptrs[i]);
+        }
+        free(coding_ptrs);        
     }
+    // printf("total time: %f ms\n", time);
+    printf("Time: %f ms, Data: %d MB\n", time, objSizeByte * k / 1024 / 1024);
     return 0;
 }

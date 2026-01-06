@@ -23,8 +23,8 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
     failed_node_id = nd
     
     # used in single node
-    # src_node_ids = all_node_ids.copy()
-    # src_node_ids.remove(nd)
+    src_node_ids = all_node_ids.copy()
+    src_node_ids.remove(nd)
     download_jobs[nd - 1] += 1
     download_selector[nd] = download_selector.get(nd, 0) + 1
     n, k, matrix = ReadECInfo(ec_info)                                              # read ec info from file

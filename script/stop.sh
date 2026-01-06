@@ -1,4 +1,6 @@
-host_num=9
+# host_num=9
+host_num=31
+# host_num=63
 USER=root
 NODE_NAME=node
 redis-cli flushall; killall ECCoordinator

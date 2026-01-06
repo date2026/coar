@@ -240,6 +240,14 @@ std::pair<timeval, timeval> ECWorker::execReceiveECPipeTaskParallel(const std::s
     objBuffer->insertObj(tmpObjId, receiveQueue);
     
     // 1. receive data from sender 
+    {
+        redisContext* receiveObjCtx = RedisUtil::createContext(_conf->_agent_ips[srcNodeId]);
+        redisReply* receiveObjReply = (redisReply*)redisCommand(receiveObjCtx, "blpop startHttpService 0");
+		assert(receiveObjReply != NULL && receiveObjReply -> type == REDIS_REPLY_ARRAY 
+            && receiveObjReply -> elements == 2);        
+        freeReplyObject(receiveObjReply);
+        redisFree(receiveObjCtx);
+    }
     gettimeofday(&receiveStart, NULL);
     Client cli(RedisUtil::ip2Str(_conf->_agent_ips[srcNodeId]).c_str(), 8080);
     for (int i = 0; i < sliceNum; i++) {
@@ -269,7 +277,7 @@ std::pair<timeval, timeval> ECWorker::execReceiveECPipeTaskParallel(const std::s
     // gettimeofday(&receiveEnd, NULL);
     LOG_INFO("execReceiveECTaskParallel done, filename: %s, nodeId: %d, srcNodeId: %d, objId: %d, tmpObjId: %d, receive time: %f ms", 
              filename.c_str(), nodeId, srcNodeId, objId, tmpObjId, RedisUtil::duration(receiveStart, receiveEnd));
-    
+    gettimeofday(&receiveEnd, NULL);
     
     return {receiveStart, receiveEnd};
 }

@@ -2,7 +2,7 @@ OUTPUT_DIR="/root/lmq_openec/script/sysstat"
 mkdir -p $OUTPUT_DIR
 rm -rf $OUTPUT_DIR/*.sar
 
-step_num=160
+step_num=320
 for i in $(seq 1 1 $step_num); do
     # collect_stats
     sar -A 2 1 -p -o $OUTPUT_DIR/$i.sar

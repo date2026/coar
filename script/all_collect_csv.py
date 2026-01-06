@@ -8,10 +8,20 @@ import matplotlib.pyplot as plt
 remote_dir = "/root/lmq_openec/script/sysstat"  
 local_dir = "/root/lmq_openec/script/sysstat/aggregated_data" 
 pic_dir = "/root/lmq_openec/script/sysstat/pic"  
+
+# remote_dir = "/root/lmq_openec/script/sysstat_sql"  
+# local_dir = "/root/lmq_openec/script/sysstat_sql/aggregated_data" 
+# pic_dir = "/root/lmq_openec/script/sysstat_sql/pic"  
+
+# remote_dir = "/root/lmq_openec/script/sysstat_pagerank_executor_8_core_2_memory_1_iter_300"  
+# local_dir = "/root/lmq_openec/script/sysstat_pagerank_executor_8_core_2_memory_1_iter_300/aggregated_data" 
+# pic_dir = "/root/lmq_openec/script/sysstat_pagerank_executor_8_core_2_memory_1_iter_300/pic"  
 ssh_username = "root"  
 plt.rcParams['font.family'] = ['Times New Roman', 'serif']  
+plt.rcParams['pdf.fonttype'] = 42
+plt.rcParams['ps.fonttype'] = 42
 
-step_num = 160
+step_num = 320
 Path(local_dir).mkdir(parents=True, exist_ok=True)
 Path(pic_dir).mkdir(parents=True, exist_ok=True)
 
@@ -147,7 +157,7 @@ def aggregate_data():
     return node_stats
 
 if __name__ == "__main__":
-    # fetch_remote_files()
+    fetch_remote_files()
     
     results = aggregate_data()
     
@@ -191,7 +201,7 @@ if __name__ == "__main__":
     # plt.grid(True, linestyle='--', alpha=0.6)
     plt.savefig(f"{pic_dir}/cpu3_6_9.pdf")
     plt.close()
-    exit(0)
+    # exit(0)
 
 
     x = list(range(1, step_num + 1))

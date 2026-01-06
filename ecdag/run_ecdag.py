@@ -7,7 +7,8 @@ from load_avg import run as load_avg_run
 import argparse
 from crar import run as crar_run
 from coar_coarse import run as coar_coarse_run
-from util import gf_cost_recorder
+# from util import gf_cost_recorder
+from util import rcb_predictor as gf_cost_recorder                                  # use GBDT to predict repair computation throughput
 import logging
 import threading
 import time
@@ -48,7 +49,9 @@ def parse_single_args(args_str):
     args_list = args_str.strip().split()
     return parser.parse_args(args_list)
 
-WORKER_NUM = 9
+# WORKER_NUM = 9
+WORKER_NUM = 31
+# WORKER_NUM = 63
 CPU_THRESHOLD = 10.0
 recorders = gf_cost_recorder.GFCostRecorderArray(WORKER_NUM, CPU_THRESHOLD)
 W = 8
