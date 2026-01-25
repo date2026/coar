@@ -1,6 +1,6 @@
 from util import stats
 from util import rs
-from crar import plan, flow
+from coar import plan, flow
 from redis import Redis
 import subprocess
 import heapq

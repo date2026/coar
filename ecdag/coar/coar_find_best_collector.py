@@ -8,9 +8,8 @@ class Node:
         self.upload_bw = upload_bw      # BW_up
         self.gf_bw = gf_bw              # R_co (Repair Computation Throughput)
         
-        # 动态状态
-        self.is_active = False          # 是否在集合 W 中
-        self.L = 0                      # 已分配的解码任务数量 (L)
+        self.is_active = False         
+        self.L = 0                      
 
     def __repr__(self):
         return f"Node(id={self.id}, L={self.L}, Active={self.is_active})"
@@ -130,8 +129,8 @@ def schedule_coar_sr(src_node_ids, all_stats, k, chunk_size_mb, alpha, num_faile
 
 def get_alpha():
     chunk_num = [2, 3, 4, 5]
-    no_reuse = [801.131000, 1189.131000, 1569.483000, 1971.269000]  # x 轴数据
-    reuse = [500.406000, 613.838000, 675.354000, 783.333000]        # y 轴数据
+    no_reuse = [801.131000, 1189.131000, 1569.483000, 1971.269000]  
+    reuse = [500.406000, 613.838000, 675.354000, 783.333000]        
     
     k_no_reuse, b_no_reuse = np.polyfit(chunk_num, no_reuse, 1)
     k_reuse, b_reuse = np.polyfit(chunk_num, reuse, 1)

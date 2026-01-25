@@ -133,7 +133,6 @@ class Dinic:
 #     dinic.add_edge(13,18,0.4);dinic.add_edge(13,19,0.4);dinic.add_edge(13,20,0.4);dinic.add_edge(13,21,0.4)
 #     dinic.add_edge(13,22,0.4);dinic.add_edge(13,23,0.4);dinic.add_edge(13,24,0.4);dinic.add_edge(13,25,0.4)
 
-#     # 第三步：第二层14-26 → 汇点27（容量和=9，0.6/0.8/0.4循环，精准求和）
 #     dinic.add_edge(14, 27, 0.8)
 #     dinic.add_edge(15, 27, 1)
 #     dinic.add_edge(16, 27, 0.4)

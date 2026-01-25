@@ -5,7 +5,7 @@ from hpca25 import run as hpca25_run
 from tree import run as tree_run
 from load_avg import run as load_avg_run
 import argparse
-from crar import run as crar_run
+from coar import run as crar_run
 from coar_coarse import run as coar_coarse_run
 # from util import gf_cost_recorder
 from util import rcb_predictor as gf_cost_recorder                                  # use GBDT to predict repair computation throughput
@@ -88,7 +88,7 @@ if __name__ == "__main__":
         elif parser.type == "load_avg":
             load_avg_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
                             parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
-        elif parser.type == "crar":
+        elif parser.type == "coar":
             crar_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
                             parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output, 8, recorders)
         elif parser.type == "coar_coarse":

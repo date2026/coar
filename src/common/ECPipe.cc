@@ -41,9 +41,9 @@ void ECWorker::execECPipeTasksParallel(AGCommand* agCmd) {
     std::thread svrThd;             // thd for svr to listen
     std::thread httpThd = std::thread([this, &svr, &tasks, &svrThd](){ startHttpService(svr, tasks, svrThd); });
     /**
-     * 叶子节点：fetch->send
-     * 中间节点节点：receive, encode, send
-     * 根节点：receive, persist
+     * leaf：fetch->send
+     * middle：receive, encode, send
+     * root：receive, persist
      */
     int receiveTaskId = 0;
     for (int i = 0; i < taskNum; i++) {
