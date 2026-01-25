@@ -34,9 +34,10 @@ def CollectStats(cpu_flag, mem_flag, disk_flag, net_flag, gf_bandwidths_flag = F
     
     # get gf bandwidth of all worker nodes
     if gf_bandwidths_flag:
+        start = time.time()
         ret["gf_bandwidth"] = recorders.GetGFBandwidths(ret["cpu"], w)
-
-
+        end = time.time()
+        # print(f"predict time: {(end - start ) * 1000} ms")
     return ret
 
 # collect node stats for generate ecdag 

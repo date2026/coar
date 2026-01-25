@@ -70,13 +70,12 @@ class GBDTThroughputPredictor:
 
     def predict(self, current_cpu, last_cpu = None, last_throughput = None):
         """
-        实时预测接口
-        :param current_cpu: 当前时刻的 CPU 利用率
-        :param last_cpu: 上一时刻的 CPU 利用率 (cpu_lag1)
-        :param last_throughput: 上一时刻的吞吐量 (throughput_lag1)
+        :param current_cpu: current cpu
+        :param last_cpu: cpu_lag1
+        :param last_throughput: throughput_lag1
         """
         if not self.is_fitted:
-            raise Exception("模型尚未训练！")
+            raise Exception("not train")
 
         input_data = pd.DataFrame([{
             'cpu': current_cpu,
@@ -122,9 +121,9 @@ class GFCostRecorderArray:
 
     def _train_single_node(self, node_idx):
         try:
-            df1 = pd.read_csv(f'/root/lmq_openec/script/sysstat/resource_profile_data/node01.csv', 
+            df1 = pd.read_csv(f'/root/lmq_openec/script/sysstat/resource_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'cpu', 'mem_percent'])
-            df2 = pd.read_csv(f'/root/lmq_openec/script/sysstat/throughput_profile_data/node01.csv', 
+            df2 = pd.read_csv(f'/root/lmq_openec/script/sysstat/throughput_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'time', 'size', 'throughput', 'download', 'upload'])
 
             data = pd.concat([df1[['cpu']], df2[['throughput']]], axis=1)
@@ -132,7 +131,7 @@ class GFCostRecorderArray:
             data['prev_throughput'] = data['throughput'].shift(1)
             data = data.dropna().reset_index(drop=True)
 
-            TEST_SIZE = 70
+            TEST_SIZE = 0
             split_index = len(data) - TEST_SIZE
 
             df1_train = df1.iloc[:split_index]
@@ -150,16 +149,31 @@ class GFCostRecorderArray:
                 future.result()  
                 
 
-
+    def _predict_single_node(self, node_id, cpu_usage):
+        try:
+            return self.gf_cost_recorders[node_id].predict(cpu_usage) / 1000
+        except Exception as e:
+            print(f"node{node_id+1} predict fail: {str(e)}")
+            return 0.0
 
 
     def GetGFBandwidths(self, cpu_usages, w):
 
         assert(len(cpu_usages) == self.node_num)
         gf_bandwidths = []
-        for node_id in range(self.node_num):
-            gf_bandwidths.append(self.gf_cost_recorders[node_id].predict(cpu_usages[node_id]))
+        # for node_id in range(self.node_num):
+        #     gf_bandwidths.append(self.gf_cost_recorders[node_id].predict(cpu_usages[node_id]) / 1000)
             # gf_bandwidths.append(self.gf_cost_recorders[node_id].predict(cpu_usages[node_id]) * 125) # Gbps-->MB/s
+
+        node_num = self.node_num
+        # node_num = 12
+        with ThreadPoolExecutor(max_workers=node_num) as executor:
+            futures = [
+                executor.submit(self._predict_single_node, node_id, cpu_usages[node_id])
+                for node_id in range(node_num)
+            ]
+            
+            gf_bandwidths = [future.result() for future in futures]
         return gf_bandwidths                        # MB/s
 
     def RecordGFOverhead(self):
@@ -168,9 +182,9 @@ class GFCostRecorderArray:
 
 
 if __name__ == "__main__":
-    df1 = pd.read_csv('/root/lmq_openec/script/sysstat/resource_profile_data/node02.csv', 
+    df1 = pd.read_csv('/root/lmq_openec/script/sysstat/resource_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'cpu', 'mem_percent'])
-    df2 = pd.read_csv('/root/lmq_openec/script/sysstat/throughput_profile_data/node02.csv', 
+    df2 = pd.read_csv('/root/lmq_openec/script/sysstat/throughput_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'time', 'size', 'throughput', 'download', 'upload'])
 
 
@@ -224,8 +238,7 @@ if __name__ == "__main__":
     epsilon = 1e-6 
     mae = np.mean(np.abs(actuals - predictions))
     mape = np.mean(np.abs((actuals - predictions) / (actuals + epsilon))) * 100
-    
-
+    print(f"MAPE, train node06[0:30], test node06[30:70]: {mape}")
 
 
 
@@ -261,4 +274,4 @@ if __name__ == "__main__":
     epsilon = 1e-6 
     mae = np.mean(np.abs(actuals - predictions))
     mape = np.mean(np.abs((actuals - predictions) / (actuals + epsilon))) * 100
-    print(f"MAPE: {mape}")
+    print(f"MAPE, train node06[0:30], test node05[0:100]: {mape}")

@@ -39,11 +39,9 @@ def fetch_remote_files():
             for file_type in ["cpu", "mem", "disk", "net"]:
                 remote_path = f"{remote_dir}/*-{file_type}.csv"
                 
-                # 执行远程查找命令
                 stdin, stdout, stderr = ssh.exec_command(f"ls {remote_path}")
                 file_list = stdout.read().decode().split()
                 
-                # 传输文件
                 for remote_file in file_list:
                     local_filename = f"{node}_{Path(remote_file).name}"
                     local_path = Path(local_dir) / local_filename
@@ -264,7 +262,7 @@ if __name__ == "__main__":
     plt.close()
 
 
-    for i in range (1, 10):
+    for i in range (1, 30):
         node_name = f"node0{i}"
         x = list(range(1, step_num + 1))
         plt.figure(figsize=(30, 12))

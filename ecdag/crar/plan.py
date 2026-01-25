@@ -1,5 +1,6 @@
 import docplex.mp.model as cpx
 import logging
+import time
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s [%(filename)s:%(lineno)d] %(levelname)s  - %(message)s'
@@ -58,8 +59,10 @@ def solve_lp_problem(n, k, S, a, b, c):
     # minimize t = max(O1, O2, ..., On)
     model.minimize(t)
     
+    start = time.time()
     solution = model.solve()
-    
+    end = time.time()
+    # print(f"lp time: {(end - start) * 1000.0}")
     if solution:
         # print(f"min overhead: {solution.get_objective_value()}")
         for i in range(n):

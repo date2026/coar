@@ -58,3 +58,5 @@ do
 } &
 done
 wait
+
+scp $DIR/script/design3/* node01:$DIR/build/

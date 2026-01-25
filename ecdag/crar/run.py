@@ -1,10 +1,11 @@
 from util import stats
 from util import rs
-from crar import plan
+from crar import plan, flow
 from redis import Redis
 import subprocess
 import heapq
 import logging
+import time
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s [%(filename)s:%(lineno)d] %(levelname)s  - %(message)s'
@@ -15,7 +16,7 @@ logging.basicConfig(
 # return ecdag to dump to a file
 def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, obj_ids, object_size, ec_info, output, w, recorders):
     coor_connect = Redis(host="localhost", port=6379, db=0)
-
+    start = time.time()
     all_stats = stats.CollectStats(True, False, False, True, True, w, recorders)    # download bandwidth, upload bandwidth, gf bandwidth of all worker nodes
     
     
@@ -29,7 +30,7 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
     download_bandwidths = [all_stats["download_bandwidth"][i - 1] for i in src_node_ids]
     upload_bandwidths = [all_stats["upload_bandwidth"][i - 1] for i in src_node_ids]
     gf_bandwidths = [all_stats["gf_bandwidth"][i - 1] for i in src_node_ids]
-    gf_bandwidths = [102400.0 for i in src_node_ids]                                 # used by full repair
+    # gf_bandwidths = [102400.0 for i in src_node_ids]                                 # used by full repair
     n, k, matrix = ReadECInfo(ec_info)                                              # read ec info from file
     logging.info(f"run, n: {n}, k: {k}, matrix: {matrix}")
     
@@ -39,7 +40,7 @@ def run(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_ids, 
 
     # generate ecdag according to repair ratio and help ratio
     GenerateECDAGFG(all_node_ids, obj_ids, row_ids, nd, src_node_ids, repair_ratios, help_ratios, matrix, n, k, output)
-    
+    # flow.generate_flow()
     # exec ec repair
     ExecECDAG(filename, failed_node_id, None, output)
     return 

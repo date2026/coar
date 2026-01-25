@@ -12,6 +12,7 @@ from util import rcb_predictor as gf_cost_recorder                              
 import logging
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -100,7 +101,7 @@ if __name__ == "__main__":
     
     refresh_gf_bandwidth_thd.join()
 
-
+    # for single-chunk repair
     # parser = GetParse()
 
     # if parser.type == "hpca25":
@@ -117,3 +118,31 @@ if __name__ == "__main__":
     #                       parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output, 8, recorders)
     # else:
     #     assert False and "undefined type"
+
+    # for single-node repair evaluation
+    # parser = GetParse()
+
+    # start_time = time.time()
+    # task_params_list = [
+    #     (parser.filename, 2, parser.src_node_ids, parser.new_ids,
+    #      parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output),
+    #     (parser.filename + "_back", 3, parser.src_node_ids, parser.new_ids,
+    #      parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output  + "_back"),
+    #     (parser.filename + "_back_back", 4, parser.src_node_ids, parser.new_ids,
+    #      parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output + "_back_back"),
+    #     (parser.filename + "_back_back_back", 5, parser.src_node_ids, parser.new_ids,
+    #      parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output + "_back_back_back")
+    # ]
+
+    # with ThreadPoolExecutor(max_workers=4) as executor:
+    #     # futures = [executor.submit(hpca25_run.run, *params) for params in task_params_list]
+    #     futures = [executor.submit(crar_run.run, *params, 8, recorders) for params in task_params_list]
+    #     for future in futures:
+    #         future.result()
+    # end_time = time.time()
+    # total_time_ms = (end_time - start_time) * 1000
+    
+    # with open("repair.log", "a", encoding="utf-8") as f:
+    #     f.write(f"{total_time_ms}\n")
+    
+    # print(f"total time: {total_time_ms} ms")

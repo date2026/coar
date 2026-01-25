@@ -376,6 +376,34 @@ void RSPlan::encode(std::vector<const char*> data, char* parity,
     }
     timeval start, end;
     gettimeofday(&start, NULL);
+    // for (int i = 0; i < k; i++) {
+    //     memcpy(data_ptrs[i], data[i] + objSizeByte / 16 * slice_id, objSizeByte / 16);
+    //     data_ptrs[i] = (char*)data[i] + objSizeByte / 16 * slice_id;
+    // }
+
+    // for (int iter = 0; iter < 30; iter++) {            
+    //     // decode
+    //     jerasure_matrix_encode(k, 1, w, matrix, data_ptrs, coding_ptrs, objSizeByte / 16);
+    //     printf("done\n");
+    //     // time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
+    // }
+    // for (int ii = 0; ii < 1; ii++) {
+    //     for (int slice_id = 0; slice_id < 16; slice_id++) {
+    //         for (int i = 0; i < k; i++) {
+    //             // memcpy(data_ptrs[i], data[i] + objSizeByte / 16 * slice_id, objSizeByte / 16);
+    //             data_ptrs[i] = (char*)data[i] + objSizeByte / 16 * slice_id;
+    //         }
+
+    //         for (int iter = 0; iter < 30; iter++) {            
+    //             // decode
+    //             jerasure_matrix_encode(k, 1, w, matrix, data_ptrs, coding_ptrs, objSizeByte / 16);
+    //             printf("done\n");
+    //             // time += (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
+    //         }
+    //     }
+    // }
+    // gettimeofday(&end, NULL);
+    // LOG_INFO("design 2 insight: jerasure_matrix_encode time: %f ms", RedisUtil::duration(start, end));
     jerasure_matrix_encode(k, m, w, matrix, data_ptrs, coding_ptrs, objSizeByte);
     gettimeofday(&end, NULL);
     memcpy(parity, coding_ptrs[0], objSizeByte);
