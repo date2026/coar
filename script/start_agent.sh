@@ -29,5 +29,4 @@ export LD_LIBRARY_PATH=$HADOOP_HOME/lib/native:$JAVA_HOME/jre/lib/amd64/server/:
 export PATH=$PATH:/home/openec/hbase-2.4.18/bin
 
 
-/root/lmq_openec/build/ECAgent > /root/lmq_openec/build/ECAgent.log &
-# /root/lmq_openec/build/ECAgent
+[your path]/build/ECAgent > [your path]/build/ECAgent.log &

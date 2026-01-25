@@ -100,7 +100,7 @@ void ECWorker::clientWrite(AGCommand* agcmd) {
 	// 2. create outputstream for each obj
 	// FSObjOutputStream** objstreams = (FSObjOutputStream**)calloc(objnum, sizeof(FSObjOutputStream*));
 	// for (int i = 0; i < objnum; i++) {
-	// 	string objname = filename+"_lmqobj_"+to_string(i);
+	// 	string objname = filename+"_your_name_obj_"+to_string(i);
 	// 	objstreams[i] = new FSObjOutputStream(_conf, objname, _underfs, pktNumPerObj);
 	// }
 
@@ -121,7 +121,7 @@ void ECWorker::clientWrite(AGCommand* agcmd) {
 	// 4. create persistThreads
 	vector<thread> persistThreads = vector<thread>(objnum);
 	for (int i = 0; i < objnum; i++) {  
-		string objname = filename+"_lmqobj_"+to_string(i);
+		string objname = filename+"_your_name_obj_"+to_string(i);
 		persistThreads[i] = thread([=]{ send4PersistObjWorker(loadQueue[i], objname, pktNumPerObj, objLocs[i]); });
 	}
 
@@ -312,7 +312,7 @@ void ECWorker::readObj(AGCommand* agCmd) {
 
 
     // 1. read obj from hdfs
-    const std::string objname = filename + "_lmqobj_" + std::to_string(objIdx);
+    const std::string objname = filename + "_your_name_obj_" + std::to_string(objIdx);
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
     int bufSize = _conf->_objSize * 1024 * 1024;
     char* buf = new char [bufSize];
@@ -476,7 +476,7 @@ void ECWorker::execECTasks(AGCommand* agCmd) {
         // persist
         assert(tasks[5]->_type == ECTaskType::PERSIST);
         persistTime += execPersistECTask(filename, tasks[5], objBuffer);
-        std::ofstream logFile("/root/lmq_openec/build/repair.log", std::ios::app);
+        std::ofstream logFile("[your path]/build/repair.log", std::ios::app);
         assert(logFile.is_open());
         logFile << receiveTime << " " << encodeTime << " " << persistTime << std::endl;
         logFile.close();
@@ -553,7 +553,7 @@ double ECWorker::execSendECTaskByRedis(const std::string& filename, const ECTask
         buf = objBuffer->getObj(objId);
     } else {
         buf = new char [bufSizeByte];
-        const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+        const std::string objname = filename + "_your_name_obj_" + std::to_string(objId);
         hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
         _hdfsHandler->readFromHDFS(file, buf, bufSizeByte);
         _hdfsHandler->closeFile(file);
@@ -632,7 +632,7 @@ double ECWorker::execSendECTaskByHttp(const std::string& filename, const ECTask*
         buf = objBuffer->getObj(objId);
     } else {
         buf = new char [bufSizeByte];
-        const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+        const std::string objname = filename + "_your_name_obj_" + std::to_string(objId);
         hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
         _hdfsHandler->readFromHDFS(file, buf, bufSizeByte);
         _hdfsHandler->closeFile(file);
@@ -771,7 +771,7 @@ double ECWorker::execPersistECTask(const std::string& filename, const ECTask* ta
         assert(false && "tmpObj not exist");
     }
     char* objBuf = objBuffer->getObj(tmpObjId);         // free by objBuffer
-    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    const std::string objname = filename + "_your_name_obj_" + std::to_string(objId);
     int objSizeByte = _conf->_objSize * 1024 * 1024;
 
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::WRITE);
@@ -935,7 +935,7 @@ std::pair<timeval, timeval> ECWorker::execFetchECTaskParallel(const std::string&
     LOG_INFO("execFetchECTaskParallel start, filename: %s, nodeId: %d, odjId: %d, tmpObjId: %d", filename.c_str(), nodeId, objId, tmpObjId);
     int bufSizeByte = _conf->_objSize * 1024 * 1024;
     char* buf = new char [bufSizeByte];                            // free by objBuffer
-    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    const std::string objname = filename + "_your_name_obj_" + std::to_string(objId);
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
     _hdfsHandler->readFromHDFS(file, buf, bufSizeByte);
     _hdfsHandler->closeFile(file);
@@ -1106,7 +1106,7 @@ std::pair<timeval, timeval> ECWorker::execPersistECTaskParallel(const std::strin
     char* objBuf = objBuffer->getObj(tmpObjId);         // free by objBuffer
     gettimeofday(&persistStart, NULL);
 
-    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    const std::string objname = filename + "_your_name_obj_" + std::to_string(objId);
     int objSizeByte = _conf->_objSize * 1024 * 1024;
 
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::WRITE);
@@ -1220,7 +1220,7 @@ void ECWorker::printTime(const ConcurrentMap& timeMap, int taskNum, const std::v
     double encodeTime = encodeStartTime != std::numeric_limits<double>::max() ? encodeEndTime - encodeStartTime : -1.0;
     double persistTime = persistStartTime != std::numeric_limits<double>::max() ? persistEndTime - persistStartTime : -1.0;
     double execTime = execStartTime != std::numeric_limits<double>::max() ? execEndTime - execStartTime : -1.0;
-    std::ofstream logFile("/root/lmq_openec/build/repair.log", std::ios::app);
+    std::ofstream logFile("[your path]/build/repair.log", std::ios::app);
     assert(logFile.is_open());
     logFile << fetchTime << " " << sendTime << " " <<  receiveTime << " " << encodeTime << " " << persistTime << " " << execTime << std::endl;
     logFile.close();

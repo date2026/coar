@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 
-dir="/root/lmq_openec/script/sysstat"
+dir="[your path]/script/sysstat"
 
 
 for sar_file in Path(dir).glob("*.sar"):

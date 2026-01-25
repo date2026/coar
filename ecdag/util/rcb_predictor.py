@@ -94,36 +94,11 @@ class GFCostRecorderArray:
         self.train_multi_thread()
 
 
-        
-        # train
-        # for i in range(self.node_num):
-        #     df1 = pd.read_csv('/root/lmq_openec/script/sysstat/resource_profile_data/node01.csv', 
-        #               header=None, names=['timestamp', 'cpu', 'mem_percent'])
-        #     df2 = pd.read_csv('/root/lmq_openec/script/sysstat/throughput_profile_data/node01.csv', 
-        #               header=None, names=['timestamp', 'time', 'size', 'throughput', 'download', 'upload'])
-
-        #     data = pd.concat([df1[['cpu']], df2[['throughput']]], axis=1)
-    
-        #     data['prev_cpu'] = data['cpu'].shift(1)
-        #     data['prev_throughput'] = data['throughput'].shift(1)
-    
-        #     data = data.dropna().reset_index(drop=True)
-    
-
-        #     TEST_SIZE = 70
-        #     split_index = len(data) - TEST_SIZE
-    
-
-        #     df1_train = df1.iloc[:split_index]
-        #     df2_train = df2.iloc[:split_index]
-
-        #     self.gf_cost_recorders[i].train(df1_train, df2_train, train_size=split_index)
-
     def _train_single_node(self, node_idx):
         try:
-            df1 = pd.read_csv(f'/root/lmq_openec/script/sysstat/resource_profile_data/node06.csv', 
+            df1 = pd.read_csv(f'[your path]/script/sysstat/resource_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'cpu', 'mem_percent'])
-            df2 = pd.read_csv(f'/root/lmq_openec/script/sysstat/throughput_profile_data/node06.csv', 
+            df2 = pd.read_csv(f'[your path]/script/sysstat/throughput_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'time', 'size', 'throughput', 'download', 'upload'])
 
             data = pd.concat([df1[['cpu']], df2[['throughput']]], axis=1)
@@ -182,9 +157,9 @@ class GFCostRecorderArray:
 
 
 if __name__ == "__main__":
-    df1 = pd.read_csv('/root/lmq_openec/script/sysstat/resource_profile_data/node06.csv', 
+    df1 = pd.read_csv('./script/sysstat/resource_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'cpu', 'mem_percent'])
-    df2 = pd.read_csv('/root/lmq_openec/script/sysstat/throughput_profile_data/node06.csv', 
+    df2 = pd.read_csv('./script/sysstat/throughput_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'time', 'size', 'throughput', 'download', 'upload'])
 
 
@@ -243,9 +218,9 @@ if __name__ == "__main__":
 
 
     # test with proflie from node05
-    df1 = pd.read_csv('/root/lmq_openec/script/sysstat/resource_profile_data/node05.csv', 
+    df1 = pd.read_csv('./script/sysstat/resource_profile_data/node05.csv', 
                         header=None, names=['timestamp', 'cpu', 'mem_percent'])
-    df2 = pd.read_csv('/root/lmq_openec/script/sysstat/throughput_profile_data/node05.csv', 
+    df2 = pd.read_csv('./script/sysstat/throughput_profile_data/node05.csv', 
                         header=None, names=['timestamp', 'time', 'size', 'throughput', 'download', 'upload'])
 
     data = pd.concat([df1[['cpu']], df2[['throughput']]], axis=1)

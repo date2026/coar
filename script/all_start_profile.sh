@@ -3,9 +3,9 @@
 host_num=9
 USER=root
 NODE_NAME=node
-DIR=/root/lmq_openec
+DIR=[your path]
 
-REMOTE_DIR=/root/lmq_openec/script
+REMOTE_DIR=[your path]/script
 
 
 func_collect() {

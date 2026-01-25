@@ -8,7 +8,7 @@ void usage() {
     std::cout << "       ./OECClient repair" << std::endl;
 }
 
-const std::string confPath = "/root/lmq_openec/conf/1.json";
+const std::string confPath = "[your path]/conf/1.json";
 
 
 void write(const std::string& file_path, const std::string& saveas, const std::string& ecidpool, int size);
@@ -180,7 +180,7 @@ void decode(const std::string& filename, const std::string& ecdagPath, std::vect
     gettimeofday(&decodeEnd, NULL);
     LOG_INFO("decode time: %f ms, decode throughput: %f MB/s", RedisUtil::duration(decodeStart, decodeEnd), 
              (double)conf->_objSize / RedisUtil::duration(decodeStart, decodeEnd) * 1000);
-    std::ofstream logFile("/root/lmq_openec/build/ECClient.log", std::ios::app);
+    std::ofstream logFile("[your path]/build/ECClient.log", std::ios::app);
     assert(logFile.is_open());
     logFile << RedisUtil::duration(decodeStart, decodeEnd) << " " << 
                (double)conf->_objSize / RedisUtil::duration(decodeStart, decodeEnd) * 1000 << std::endl;

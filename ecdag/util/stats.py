@@ -12,7 +12,7 @@ logging.basicConfig(
 
 # collect node stats for generate ecdag 
 def CollectStats(cpu_flag, mem_flag, disk_flag, net_flag, gf_bandwidths_flag = False, w = 8, recorders = None):
-    with open("/root/lmq_openec/conf/1.json") as f:
+    with open("[your path]/conf/1.json") as f:
         conf = json.load(f)
     local_ip = conf["local_ip"]
     agent_ips = conf["agent_ips"]
@@ -42,7 +42,7 @@ def CollectStats(cpu_flag, mem_flag, disk_flag, net_flag, gf_bandwidths_flag = F
 
 # collect node stats for generate ecdag 
 def CollectJobs():
-    with open("/root/lmq_openec/conf/1.json") as f:
+    with open("[your path]/conf/1.json") as f:
         conf = json.load(f)
     agent_ips = conf["agent_ips"]
     coor_connect = Redis(host="localhost", port=6379, db=0)
@@ -63,7 +63,7 @@ def CollectJobs():
     return download_tasks, upload_tasks
 
 def UpdateTasks(download_tasks, upload_tasks):
-    with open("/root/lmq_openec/conf/1.json") as f:
+    with open("[your path]/conf/1.json") as f:
         conf = json.load(f)
     agent_ips = conf["agent_ips"]
     coor_connect = Redis(host="localhost", port=6379, db=0)
@@ -75,7 +75,7 @@ def UpdateTasks(download_tasks, upload_tasks):
 def ReStoreTasks(download_selector, upload_selector):
     print(f"download_selector: {download_selector}")
     print(f"upload_selector: {upload_selector}")
-    with open("/root/lmq_openec/conf/1.json") as f:
+    with open("[your path]/conf/1.json") as f:
         conf = json.load(f)
     agent_ips = conf["agent_ips"]
     coor_connect = Redis(host="localhost", port=6379, db=0)

@@ -228,7 +228,7 @@ def ExecECDAG(filename, failed_node_id, upload_selector, output):
     # print(f"node_str{nodes_str}")
     
     ssh_cmd = "ssh node01"
-    cmd = "/root/lmq_openec/build/ECClient decode " + filename + " " + output +  " 0 2 3 4087 1"
+    cmd = "./build/ECClient decode " + filename + " " + output +  " 0 2 3 4087 1"
     print(f"ssh_cmd: {ssh_cmd}, cmd: {cmd}")
     ret = subprocess.getstatusoutput(ssh_cmd + " " + cmd)
     print(f"ret: {ret}")

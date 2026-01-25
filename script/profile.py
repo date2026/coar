@@ -6,13 +6,13 @@ import re
 import random
 from datetime import datetime
 
-EC_TEST_CMD = ["/root/lmq_openec/build/ECTest"] 
+EC_TEST_CMD = ["[your path]/build/ECTest"] 
 
 NIC_NAME = "eth0" 
 MAX_BANDWIDTH_MBPS = 15000  
 
-CSV_FILE = "/root/lmq_openec/script/system_metrics.csv"
-RESOURCE_CSV_FILE = "/root/lmq_openec/script/resource_usage.csv"
+CSV_FILE = "[your path]/script/system_metrics.csv"
+RESOURCE_CSV_FILE = "[your path]/script/resource_usage.csv"
 
 SAMPLE_INTERVAL = 5
 

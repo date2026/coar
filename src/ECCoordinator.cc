@@ -8,7 +8,7 @@
 using namespace std;
 
 int main(int argc, char** argv) {
-	const std::string confPath = "/root/lmq_openec/conf/1.json";
+	const std::string confPath = "[your path]/conf/1.json";
 	Config* conf = new Config(confPath);
 	StripeStore* ss = new StripeStore(conf); 
 

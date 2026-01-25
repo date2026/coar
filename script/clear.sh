@@ -1,7 +1,7 @@
 host_num=9
 USER=root
 NODE_NAME=node
-DIR=/root/lmq_openec
+DIR=[your path]
 
 rm -rf $DIR/build/ECCoordinator.log $DIR/build/fileMeta
 

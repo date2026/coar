@@ -46,7 +46,7 @@ void ECInputStream::init() {
 }
 
 void ECInputStream::readWorker(int objIdx) {
-    const std::string readObjKey = _filename + "_lmqobj_" + std::to_string(objIdx) + "_read";
+    const std::string readObjKey = _filename + "_your_name_obj_" + std::to_string(objIdx) + "_read";
     LOG_INFO("ECInputStream::readWorker start, objname: %s, objIdx: %d", readObjKey.c_str(), objIdx);
     redisContext* readObjCtx = RedisUtil::createContext(_conf->_localIp);
     redisReply* rReply = (redisReply*)redisCommand(readObjCtx, "blpop %s 0", readObjKey.c_str());

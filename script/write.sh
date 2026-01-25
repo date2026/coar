@@ -1,1 +1,0 @@
-/home/openec/lmq_openec/build/ECClient write /home/openec/lmq_openec/build/input_16MB_random /input_16MB rs_9_6_pool 16

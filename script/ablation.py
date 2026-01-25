@@ -3,7 +3,7 @@ import re
 import os
 USERNAME = "root"  
 
-REMOTE_FILE_PATH = "/root/lmq_openec/build/repair.log"  
+REMOTE_FILE_PATH = "[your path]/build/repair.log"  
 
 NODES = [f"node{i:02d}" for i in range(1, 10)]  
 
@@ -86,10 +86,7 @@ def main():
 
 
     
-    FILE_PATH = "/root/lmq_openec/build/input_384MB_ecdag_temp"
-    # FILE_PATH = "/root/lmq_openec/conf/384_n_9_k_6/ecdag_decode_384_pipe_5"
-    # FILE_PATH = "/root/lmq_openec/conf/384_n_9_k_6/ecdag_decode_384_ppr_5"
-    # FILE_PATH = "/root/lmq_openec/conf/384_n_9_k_6/ecdag_decode_384_cr_5"
+    FILE_PATH = "[your path]/build/input_384MB_ecdag_temp"
     node_ids = extract_first_id_after_encode_partial(FILE_PATH)
     print(node_ids)
     for id in node_ids:

@@ -16,7 +16,7 @@ alpha = 1
 
 # read bandwidth from file, parse, update upload and download bandwidth
 def RefreshBandWidth():
-    with open("/root/lmq_openec/conf/1.json") as f:
+    with open("[your path]/conf/1.json") as f:
         conf = json.load(f)
     local_ip = conf["local_ip"]
     
@@ -59,7 +59,7 @@ def RefreshBandWidth():
 
 
 def RefreshCPU():
-    with open("/root/lmq_openec/conf/1.json") as f:
+    with open("[your path]/conf/1.json") as f:
         conf = json.load(f)
     local_ip = conf["local_ip"]
     
@@ -82,7 +82,7 @@ def RefreshCPU():
         print(f"cpu_usage: {cpu_usage}")
         
 def RefreshLoadAverage():
-    with open("/root/lmq_openec/conf/1.json") as f:
+    with open("[your path]/conf/1.json") as f:
         conf = json.load(f)
     local_ip = conf["local_ip"]
     

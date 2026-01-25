@@ -2,7 +2,7 @@
 
 from util.stats import *
 from hpca25 import run as hpca25_run
-from lmq import run as lmq_run
+from tree import run as tree_run
 from load_avg import run as load_avg_run
 import argparse
 from crar import run as crar_run
@@ -82,8 +82,8 @@ if __name__ == "__main__":
         if parser.type == "hpca25":
             hpca25_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
                         parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
-        elif parser.type == "lmq":
-            lmq_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
+        elif parser.type == "tree":
+            tree_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
                         parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
         elif parser.type == "load_avg":
             load_avg_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
@@ -107,8 +107,8 @@ if __name__ == "__main__":
     # if parser.type == "hpca25":
     #     hpca25_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
     #                    parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
-    # elif parser.type == "lmq":
-    #     lmq_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
+    # elif parser.type == "tree":
+    #     tree_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
     #                 parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
     # elif parser.type == "load_avg":
     #     load_avg_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \

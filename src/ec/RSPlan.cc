@@ -255,7 +255,7 @@ void RSPlan::generateMatrix() {
     }
 
     // dump ec info to file
-    std::string ecInfoFile = "/root/lmq_openec/build/ec_info";
+    std::string ecInfoFile = "[your path]/build/ec_info";
     std::ofstream ofs(ecInfoFile, std::ios::out | std::ios::trunc);
     assert(ofs.is_open() && "Failed to open ec info file");
     ofs << _n << " " << _k << std::endl;

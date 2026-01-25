@@ -207,7 +207,7 @@ std::pair<timeval, timeval> ECWorker::execFetchECPipeFGTaskParallel(const std::s
     objBuffer->insertObj(tmpObjId, fetchQueue); 
     
     char* buf = new char [sizeByte];               
-    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    const std::string objname = filename + "_your_name_obj_" + std::to_string(objId);
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
     _hdfsHandler->pReadFromHDFS(file, buf, startPos, sizeByte);
     _hdfsHandler->closeFile(file);
@@ -383,7 +383,7 @@ std::pair<timeval, timeval> ECWorker::execPersistECPipeFGTaskParallel(const std:
     
 
     gettimeofday(&persistStart, NULL);
-    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    const std::string objname = filename + "_your_name_obj_" + std::to_string(objId);
 
     const int sliceNum = rightBound - leftBound + 1;
     const int sliceSizeByte = _conf->_sliceSize * 1024 * 1024;

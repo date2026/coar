@@ -61,7 +61,7 @@ class GFCostRecorderArray:
 
     def RecordGFOverhead(self):
 
-        with open("/root/lmq_openec/conf/1.json") as f:
+        with open("[your path]/conf/1.json") as f:
             conf = json.load(f)
         local_ip = conf["local_ip"]
         

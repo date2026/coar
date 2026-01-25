@@ -199,7 +199,7 @@ std::pair<timeval, timeval> ECWorker::execFetchECPipeTaskParallel(const std::str
     assert(bufSizeByte % sliceSizeByte == 0);
     int sliceNum = bufSizeByte / sliceSizeByte;          
     char* buf = new char [bufSizeByte];               
-    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    const std::string objname = filename + "_your_name_obj_" + std::to_string(objId);
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::READ);
     _hdfsHandler->readFromHDFS(file, buf, bufSizeByte);
     _hdfsHandler->closeFile(file);
@@ -359,7 +359,7 @@ std::pair<timeval, timeval> ECWorker::execPersistECPipeTaskParallel(const std::s
     
 
     gettimeofday(&persistStart, NULL);
-    const std::string objname = filename + "_lmqobj_" + std::to_string(objId);
+    const std::string objname = filename + "_your_name_obj_" + std::to_string(objId);
     int objSizeByte = _conf->_objSize * 1024 * 1024;
     int sliceSizeByte = _conf->_sliceSize * 1024 * 1024;
     assert(objSizeByte % sliceSizeByte == 0);

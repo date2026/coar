@@ -4,7 +4,7 @@
 NODE_NUM=31
 # NODE_NUM=63
 NODE_NAME=node
-HOME=/root/lmq_openec
+HOME=[your path]
 USER=root
 ip_list=(
     192.168.0.220 

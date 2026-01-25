@@ -4,7 +4,7 @@
 NODE_NUM=31
 # NODE_NUM=63
 NODE_NAME=node
-DIR=/root/lmq_openec
+DIR=[your path]
 
 for((i=1;i<=$NODE_NUM;i++))
 do
