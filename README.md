@@ -217,7 +217,7 @@ Then you can run coordinator and agents by the script `start.sh`.
 
 ### 4. Write
 
-Write file to hdfs by the follwing command.
+Write file to HDFS by the follwing command.
 
 `[your_path]/build/ECClient write [your_path_to_file] [your_path_in_hdfs] [your_poolname] [your_file_size_in_MB]`
 
@@ -260,18 +260,19 @@ Then input the repair command parameters.
 
 Parameter meanings are as follows
 
-| field           |  description                                                    |           
-| -----------     | ---------                                                       |
-| `type`          | Repair scheme.                                                  |
-| `filename`      | Input file name in HDFS.                                        |
-| `failed_node_id`| The filed node id.                                              |
-| `src_node_ids`  | New node ids to receive repaired chunk.                         |
-| `all_node_ids`  | Nodes of this stripe.                                           |
-| `obj_ids`       | Object ids of this stripe. They are determined when written     |
-| `row_ids`       |  Row ids of the objects of this stripe.                         |
-| `object_size`   | Object size in byte.                                            |
-| `ec_info`       | File path that stores EC parameters.                            |
-| `output`        | File path that decode command dumps to.                         |
+| field           |  description                                                                            |           
+| -----------     | ---------                                                                               |
+| `type`          | Repair scheme, e.g., coar.                                                                          |
+| `filename`      | Input file path stored in HDFS.                                                         |
+| `failed_node_id`| The failed node id.                                                                     |
+| `new_ids`| New node id to store the repaired chunk.                                                                     |
+| `src_node_ids`  | Surviving node ids.                                                                     |
+| `all_node_ids`  | All nodes of this stripe.                                                               |
+| `obj_ids`       | Object ids of this stripe. They are determined when written                             |
+| `row_ids`       | Row ids of the objects of this stripe. Start from 1 and increase by 1 for each object.  |
+| `object_size`   | Object size in byte.                                                                    |
+| `ec_info`       | File path that stores EC parameters.                                                    |
+| `output`        | File path that decode command dumps to. Just used by Coordinator                        |
 
 A example is as follows.
 
@@ -295,47 +296,3 @@ A example is as follows.
 You can stop the coordinator and all agents by the script *stop.sh*. 
 
 `bash [your_path]/script/stop.sh`
-
-
-
-
-
-### Write
-
-Before you start writing blocks into bybridlazy, you should start the encoding daemon of OpenEC by the follwing command.Please make sure that this command is excuted in the agent's node. 
-
-`./OECClient startEncode`
-
-You can write blocks into hybridlazy by the script *encode.sh*. Please make sure that encode.sh is excuted in the agent's node. 
-
-`./encode.sh stripe_num k block_path saveas ec_pool_id ec_policy block_size`
-
-After finishing the encoding, you can stop the encoding daemon by the following command. Please make sure that this command is excuted in the agent's node.
-
-`./OECClient stopEncode`
-
-## Read
-
-You can read file by the following command. Please make sure that this command is excuted in the agent's node.
-
-`./OECClient read inputfilename saves`
-
-
-
-
-
-## Repair
-
-You can repair the failed blocks by the following command. Please make sure that this command is excuted in the agent's node.
-
-`./OECClient startRepair`
-
-After finishing the repair, you can stop repair by the following command. Please make sure that this command is excuted in the agent's node.
-
-`./OECClient stopRepair`
-
-## Stop
-
-You can stop the coordinator and all agents by the script *stop.sh*. 
-
-`./stop.sh`
