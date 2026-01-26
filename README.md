@@ -67,8 +67,6 @@ export LD_LIBRARY_PATH=$HADOOP_HOME/lib/native:$JAVA_HOME/jre/lib/amd64/server:/
 
 # Spark (v2.4.0)
 # 1. Download and install spark-2.4.0
-wget https://archive.apache.org/dist/spark/spark-2.4.0/spark-2.4.0.tgz
-
 wget https://archive.apache.org/dist/spark/spark-2.4.0/spark-2.4.0-bin-without-hadoop.tgz -O spark-2.4.0.tgz
 
 
