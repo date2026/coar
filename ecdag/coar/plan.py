@@ -6,6 +6,7 @@ logging.basicConfig(
     format='%(asctime)s [%(filename)s:%(lineno)d] %(levelname)s  - %(message)s'
 )
 SLICE_NUM = 4
+# SLICE_NUM = 64
 
 def solve_lp_problem(n, k, S, a, b, c):
     """

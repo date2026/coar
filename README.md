@@ -1,5 +1,85 @@
 # Preparation
 
+Instal the following libraries and tools first.
+
+
+### Basie Tools
+```bash
+# CMake 3.1, g++ 4.8.4 or higher
+sudo apt-get update
+sudo apt-get install cmake g++-4.8
+
+# Redis (v3.2.8 or higher)
+wget (http://download.redis.io/releases/redis-3.2.8.tar.gz)
+tar -zxvf redis-3.2.8.tar.gz
+cd redis-3.2.8
+make && sudo make install
+
+# Configure Redis to allow remote access
+# 1. Edit /etc/redis/6379.conf: Change "bind 127.0.0.0" to "bind 0.0.0.0"
+# 2. Restart Redis
+sudo service redis_6379 restart
+
+# Hiredis (C client for Redis)
+wget https://github.com/redis/hiredis/archive/v1.0.2.tar.gz -O hiredis.tar.gz
+tar -zxvf hiredis.tar.gz
+cd hiredis
+make && sudo make install
+
+# Intel ISA-L (v2.14.0 or higher)
+wget https://github.com/intel/isa-l/archive/v2.30.0.tar.gz -O isa-l-2.14.0.tar.gz
+tar -zxvf isa-l-2.14.0.tar.gz
+cd isa-l-2.14.0
+./autogen.sh && ./configure
+make && sudo make install
+
+# gf-complete (v1.03)
+wget https://github.com/ceph/gf-complete/archive/master.tar.gz -O gf-complete.tar.gz
+tar -zxvf gf-complete.tar.gz
+cd gf-complete
+./autogen.sh && ./configure
+make && sudo make install
+```
+
+### Hadoop & Spark Requirements
+
+Install Java 8, Maven, Hadoop, and Spark.
+
+```Bash
+# Maven (v3.5.0 or higher)
+# 1. Download and install apache-maven-3.5.0-bin.tar.gz.
+wget https://archive.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz
+tar -zxvf apache-maven-3.5.0-bin.tar.gz
+# 2. Set the environment variables.
+export M2_HOME=$(pwd)/apache-maven-3.5.0
+export PATH=$PATH:$M2_HOME/bin
+
+# HDFS (v3.0.0)
+# 1. Download and install HDFS
+wget https://archive.apache.org/dist/hadoop/common/hadoop-3.0.0/hadoop-3.0.0.tar.gz
+tar -zxvf hadoop-3.0.0.tar.gz
+# 2. Set the following environment variables in your ~/.bashrc or a setup script:
+export HADOOP_SRC_DIR=[path_to_hadoop]
+export HADOOP_HOME=$HADOOP_SRC_DIR/hadoop-dist/target/hadoop-3.0.0
+export PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH
+export HADOOP_CLASSPATH=$JAVA_HOME/lib/tools.jar:$(hadoop classpath --glob)
+export LD_LIBRARY_PATH=$HADOOP_HOME/lib/native:$JAVA_HOME/jre/lib/amd64/server:/usr/local/lib:$LD_LIBRARY_PATH
+
+# Spark (v2.4.0)
+# 1. Download and install spark-2.4.0
+wget https://archive.apache.org/dist/spark/spark-2.4.0/spark-2.4.0.tgz
+
+wget https://archive.apache.org/dist/spark/spark-2.4.0/spark-2.4.0-bin-without-hadoop.tgz -O spark-2.4.0.tgz
+
+
+tar -zxvf spark-2.4.0.tgz
+# 2. Set the environment variables.
+export SPARK_HOME=[path_to_spark]/spark-2.4.0
+export SPARK_MASTER_HOST=yarn
+```
+
+<!-- 
+
 - cmake v3.1 or higher
 
   `sudo apt-get install cmake`
@@ -111,14 +191,14 @@
 
   `export SPARK_HOME=[your_path_to_spark-2.4.0]`
 
-  `export SPARK_MASTER_HOST=yarn`
+  `export SPARK_MASTER_HOST=yarn` -->
 
 
 
 
 # HDFS Configuration
 
-Example Architecture:
+Example architecture for the HDFS system is as follows.
 
 | IP/hostname |    HDFS   |      ROLE     |
 | ----------- | --------- | --------------|
@@ -127,7 +207,7 @@ Example Architecture:
 | node02      | DataNode  | Agent         |
 | nodexx      | DataNode  | Agent         |
 
-We provide sample configuration files under conf for HDFS. Here, we show some of the fields related to the integration. You may configure HDFS by modifying files under `$HADOOP_HOME/etc/hadoop` and distribute the configuration files to all the nodes in the testbed.
+We provide sample configuration files under `conf` for HDFS. Here, we show some of the fields related to the integration. You may configure HDFS by modifying files under `$HADOOP_HOME/etc/hadoop` and distribute the configuration files to all the nodes in the testbed.
 
 - core-site.xml
 
@@ -196,7 +276,7 @@ Please make sure that you have configured HDFS and Spark successfully and correc
 
 ### 1. Start foreground workloads
 
-Start foreground distribute data analytics workloads by Hibench. Use K-means clustering as an example.
+Start foreground distributed data analytics workloads by Hibench (following the instructions at https://github.com/Intel-bigdata/HiBench). Use K-means clustering as an example.
 
 `bash [your_path_to_hibench]/bin/workloads/ml/kmeans/spark/run.sh`
 
@@ -217,7 +297,7 @@ Then you can run coordinator and agents by the script `start.sh`.
 
 ### 4. Write
 
-Write file to HDFS by the follwing command.
+Write file to HDFS by the following command.
 
 `[your_path]/build/ECClient write [your_path_to_file] [your_path_in_hdfs] [your_poolname] [your_file_size_in_MB]`
 
@@ -228,7 +308,7 @@ After the file is write, you can read it by the following command.
 
 ### 5. Encode
 
-After the file is write, encode by the following command. Herer,  `your_path_of_encode_config` is your file path to the config file of encode operations, see `[your_path]/conf/640_n_14_k_10/ecdag_encode_640_0` for example.
+After the file is write, encode by the following command. Here,  `your_path_of_encode_config` is your file path to the config file of encode operations, see `[your_path]/conf/640_n_14_k_10/ecdag_encode_640_0` for example.
 
 
 `[your_path]/build/ECClient encode [your_path_in_hdfs] [your_path_of_encode_config]`
@@ -268,13 +348,13 @@ Parameter meanings are as follows
 | `new_ids`| New node id to store the repaired chunk.                                                                     |
 | `src_node_ids`  | Surviving node ids.                                                                     |
 | `all_node_ids`  | All nodes of this stripe.                                                               |
-| `obj_ids`       | Object ids of this stripe. They are determined when written                             |
+| `obj_ids`       | Object ids of this stripe. They are determined when written.                             |
 | `row_ids`       | Row ids of the objects of this stripe. Start from 1 and increase by 1 for each object.  |
 | `object_size`   | Object size in byte.                                                                    |
 | `ec_info`       | File path that stores EC parameters.                                                    |
 | `output`        | File path that decode command dumps to. Just used by Coordinator                        |
 
-A example is as follows.
+An example is as follows.
 
 ```
 --type crar \
@@ -289,6 +369,13 @@ A example is as follows.
 --ec_info ./build/ec_info \
 --output ./build/input_640MB_ecdag_temp
 ```
+
+A repair operation can also be triggered with specified config command as follows.
+
+```
+[your_path]/build/ECClient decode [your_path_in_hdfs] [your_path]/conf/640_n_14_k_10/ecdag_decode_640_ppr_10  0 1 2 3 4 4086 5
+```
+
 
 
 ### 7. Stop
