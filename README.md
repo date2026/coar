@@ -10,7 +10,7 @@ sudo apt-get update
 sudo apt-get install cmake g++-4.8
 
 # Redis (v3.2.8 or higher)
-wget (http://download.redis.io/releases/redis-3.2.8.tar.gz)
+wget http://download.redis.io/releases/redis-3.2.8.tar.gz
 tar -zxvf redis-3.2.8.tar.gz
 cd redis-3.2.8
 make && sudo make install
