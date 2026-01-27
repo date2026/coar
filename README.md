@@ -355,7 +355,7 @@ Parameter meanings are as follows
 An example is as follows.
 
 ```
---type crar \
+--type coar \
 --filename /input_640MB \
 --failed_node_id 10 \
 --src_node_ids 1 2 3 4 5 6 7 8 9 11 12 13 14 \
