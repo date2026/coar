@@ -55,55 +55,53 @@ def run_ppr(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_i
 
     nd = min(all_node_ids, key=lambda nid: (download_jobs[nid-1] + 1) * object_size / all_stats["download_bandwidth"][nid-1])
     
-
     src_candidates = [nid for nid in all_node_ids if nid != nd]
-    
-
     def score_node(nid):
         up = all_stats["upload_bandwidth"][nid-1] / (upload_jobs[nid-1] + 1)
         dl = all_stats["download_bandwidth"][nid-1] / (download_jobs[nid-1] + 1)
         return min(up, dl)
 
-    src_candidates.sort(key=score_node)
+    src_candidates.sort(key=score_node, reverse=True)
     selected_srcs = src_candidates[:k]
+    selected_srcs.sort(key=score_node) 
     
     node_id_2_coefs = rs.GetCoefVector(matrix, all_node_ids, row_ids, selected_srcs, nd, k, 8)
 
     result = []
-    
     for sid in selected_srcs:
-        oid = obj_ids[sid-1]
-        result.append(("FETCH", sid - 1, oid, oid))
+        result.append(("FETCH", sid - 1, obj_ids[sid-1], obj_ids[sid-1]))
 
     tree_queue = [(nid, obj_ids[nid-1], node_id_2_coefs[nid]) for nid in selected_srcs]
     global_temp_obj_id = 2047
 
     while len(tree_queue) > 1:
+        tree_queue.sort(key=lambda x: score_node(x[0]))
+        
         next_level = []
-        for i in range(0, len(tree_queue), 2):
-            if i + 1 < len(tree_queue):
-                (n_src, o_src, c_src), (n_dst, o_dst, c_dst) = tree_queue[i], tree_queue[i+1]
-                
-                result.append(("SEND", n_src-1, n_dst-1, o_src))
-                result.append(("RECEIVE", n_dst-1, n_src-1, o_src, o_src))
-                
-                new_tmp_id = global_temp_obj_id
-                global_temp_obj_id -= 1
-                
-                result.append(("ENCODE_PARTIAL", n_dst-1, 2, [o_src, o_dst], new_tmp_id, [c_src, c_dst]))
-                
-                next_level.append((n_dst, new_tmp_id, 1))
-            else:
-                next_level.append(tree_queue[i])
+        half = len(tree_queue) // 2
+        for i in range(half):
+            (n_src, o_src, c_src) = tree_queue[i]
+            (n_dst, o_dst, c_dst) = tree_queue[-(i+1)]
+            
+            result.append(("SEND", n_src-1, n_dst-1, o_src))
+            result.append(("RECEIVE", n_dst-1, n_src-1, o_src, o_src))
+            
+            new_tmp_id = global_temp_obj_id
+            global_temp_obj_id -= 1
+            result.append(("ENCODE_PARTIAL", n_dst-1, 2, [o_src, o_dst], new_tmp_id, [c_src, c_dst]))
+            
+            next_level.append((n_dst, new_tmp_id, 1))
+        
+        if len(tree_queue) % 2 != 0:
+            next_level.append(tree_queue[half])
+            
         tree_queue = next_level
 
     last_node, last_obj, _ = tree_queue[0]
     if last_node != nd:
         result.append(("SEND", last_node-1, nd-1, last_obj))
         result.append(("RECEIVE", nd-1, last_node-1, last_obj, last_obj))
-        result.append(("PERSIST", nd-1, last_obj, last_obj, nd - 1)) 
-    else:
-        result.append(("PERSIST", nd-1, last_obj, last_obj, nd - 1))
+    result.append(("PERSIST", nd-1, last_obj, last_obj, nd - 1))
 
     DumpOutput(result, output)
     ExecECDAG(filename, nd, {n:1 for n in selected_srcs}, output)
