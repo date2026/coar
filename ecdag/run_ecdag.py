@@ -7,6 +7,7 @@ from load_avg import run as load_avg_run
 import argparse
 from coar import run as crar_run
 from coar_coarse import run as coar_coarse_run
+from scheme import run as scheme_run
 # from util import gf_cost_recorder
 from util import rcb_predictor as gf_cost_recorder                                  # use GBDT to predict repair computation throughput
 import logging
@@ -94,6 +95,15 @@ if __name__ == "__main__":
         elif parser.type == "coar_coarse":
             coar_coarse_run.run(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
                             parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output, 8, recorders)
+        elif parser.type == "cr":
+            scheme_run.run_cr(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
+                        parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
+        elif parser.type == "ppr":
+            scheme_run.run_ppr(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
+                        parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
+        elif parser.type == "rp":
+            scheme_run.run_rp(parser.filename, parser.failed_node_id, parser.src_node_ids, parser.new_ids, \
+                        parser.all_node_ids, parser.row_ids, parser.obj_ids, parser.object_size, parser.ec_info, parser.output)
         else:
             assert False and "undefined type"
 

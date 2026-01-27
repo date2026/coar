@@ -364,8 +364,8 @@ An example is as follows.
 --obj_ids 0 1 2 3 4 5 6 7 8 9 4095 4094 4093 4092 \
 --row_ids 1 2 3 4 5 6 7 8 9 10 11 12 13 14 \
 --object_size 67108864 \
---ec_info ./build/ec_info \
---output ./build/input_640MB_ecdag_temp
+--ec_info ../build/ec_info \
+--output ../build/input_640MB_ecdag_temp
 ```
 
 A repair operation can also be triggered with specified config command as follows.
