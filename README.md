@@ -272,7 +272,7 @@ To start Spark, we run the following commands in the Master.
 Please make sure that you have configured HDFS and Spark successfully and correctly.
 ### 0. Build
 
-```
+```bash
 cd [your_path]
 mkdir build
 cd build
@@ -311,7 +311,7 @@ Then you can run coordinator at master node and run agents in each worker nodes.
 
 Or run the script to start coordinator and agents in master and worker nodes.
 
-```
+```bash
 bash [your_path]/script/start.sh
 ```
 
@@ -338,7 +338,7 @@ After the file is write, encode by the following command. Here,  `your_path_of_e
 
 After the file is encoded, run the following command in master node to trigger a repair operation.
 
-```
+```bash
 python3 run_ecdag.py
 ```
 
@@ -392,7 +392,7 @@ An example is as follows.
 
 A repair operation can also be triggered in one worker node with a specified ecdag config command as follows.
 
-```
+```bash
 [your_path]/build/ECClient decode [your_path_in_hdfs] [your_path]/conf/640_n_14_k_10/ecdag_decode_640_ppr_10  0 1 2 3 4 4086 5
 ```
 
