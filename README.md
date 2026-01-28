@@ -315,7 +315,7 @@ Write file to HDFS by executing the following command in one worker node.
 
 After the file is written, you can read it in one worker node by the following command.
 
-`[your_path]/build/ECClient read [your_path_in_hdfs] [your_path]/build/[your_path_to_fetch]`
+`[your_path]/build/ECClient read [your_path_in_hdfs] [your_path_to_fetch]`
 
 
 ### 5. Encode
@@ -323,7 +323,7 @@ After the file is written, you can read it in one worker node by the following c
 After the file is write, encode by the following command. Here,  `your_path_of_encode_config` is your file path to the config file of encode operations, see `[your_path]/conf/640_n_14_k_10/ecdag_encode_640_0` for example.
 
 
-`[your_path]/build/ECClient encode [your_path_in_hdfs] [your_path_of_encode_config]`
+`[your_path]/build/ECClient encode [your_path_in_hdfs] [your_path_of_ecdag_encode_config]`
 
 
 ### 6. Repair/Decode
