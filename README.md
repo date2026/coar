@@ -336,7 +336,7 @@ After the file is write, encode by the following command. Here,  `your_path_of_e
 
 ### 6. Repair/Decode
 
-After the file is encoded, run the following command in master node to trigger a repair operation.
+After the file is encoded, run the following command in master node to trigger a repair operation with coar.
 
 ```bash
 python3 run_ecdag.py
