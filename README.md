@@ -270,6 +270,14 @@ To start Spark, we run the following commands in the Master.
 # Run
 
 Please make sure that you have configured HDFS and Spark successfully and correctly.
+### 0. Build
+
+```
+cd [your_path]
+mkdir build
+cd build
+cmake .. && make
+```
 
 
 ### 1. Start foreground workloads
