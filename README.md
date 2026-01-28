@@ -393,7 +393,7 @@ An example is as follows.
 A repair operation can also be triggered in one worker node with a specified ecdag config command as follows.
 
 ```bash
-[your_path]/build/ECClient decode [your_path_in_hdfs] [your_path]/conf/640_n_14_k_10/ecdag_decode_640_ppr_10  0 1 2 3 4 4086 5
+[your_path]/build/ECClient decode [your_path_in_hdfs] [your_path]/build/input_640MB_ecdag_temp  0 1 2 3 4 4086 5
 ```
 
 
