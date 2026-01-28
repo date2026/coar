@@ -372,7 +372,7 @@ Parameter meanings are as follows
 | `row_ids`       | Row ids of the objects of this stripe. Start from 1 and increase by 1 for each object.  |
 | `object_size`   | Object size in byte.                                                                    |
 | `ec_info`       | File path that stores EC parameters.                                                    |
-| `output`        | File path that ecdag decode config dumps to. Just used by ECCoordinator                        |
+| `output`        | File path that decoding ecdag config dumps to. Just used by ECCoordinator                        |
 
 An example is as follows.
 
