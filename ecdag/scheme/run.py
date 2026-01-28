@@ -120,7 +120,7 @@ def run_rp(filename, failed_node_id, src_node_ids, new_ids, all_node_ids, row_id
     # src_candidates.sort(key=lambda n: (all_stats["upload_bandwidth"][n-1] + all_stats["download_bandwidth"][n-1]), reverse=True)
     src_candidates.sort(key=lambda n: (min(all_stats["upload_bandwidth"][n-1], all_stats["download_bandwidth"][n-1])), reverse=True)
     pipe_nodes = src_candidates[:k]
-
+    pipe_nodes.reverse()
     node_id_2_coefs = rs.GetCoefVector(matrix, all_node_ids, row_ids, pipe_nodes, nd, k, 8)
 
     result = []
