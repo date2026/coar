@@ -289,17 +289,31 @@ start monitors in agents to monitor node's network and computational resources.
 ### 3. Start coordinator and agents
 
 
-Then you can run coordinator and agents by the script `start.sh`.
+Then you can run coordinator at master node and run agents in each worker nodes.
 
-`bash [your_path]/script/start.sh`
+
+
+```bash
+# in master node
+[your_path]/build/ECCoordinator
+
+# in each worker node
+[your_path]/build/ECAgent
+```
+
+Or run the script to start coordinator and agents in master and worker nodes.
+
+```
+bash [your_path]/script/start.sh
+```
 
 ### 4. Write
 
-Write file to HDFS by the following command.
+Write file to HDFS by executing the following command in one worker node.
 
 `[your_path]/build/ECClient write [your_path_to_file] [your_path_in_hdfs] [your_poolname] [your_file_size_in_MB]`
 
-After the file is write, you can read it by the following command.
+After the file is written, you can read it in one worker node by the following command.
 
 `[your_path]/build/ECClient read [your_path_in_hdfs] [your_path]/build/[your_path_to_fetch]`
 
@@ -314,7 +328,7 @@ After the file is write, encode by the following command. Here,  `your_path_of_e
 
 ### 6. Repair/Decode
 
-After the file is encoded, run the following command to trigger a repair operation with coar.
+After the file is encoded, run the following command in master node to trigger a repair operation.
 
 ```
 python3 run_ecdag.py
@@ -368,7 +382,7 @@ An example is as follows.
 --output ../build/input_640MB_ecdag_temp
 ```
 
-A repair operation can also be triggered with specified config command as follows.
+A repair operation can also be triggered in one worker node with a specified ecdag config command as follows.
 
 ```
 [your_path]/build/ECClient decode [your_path_in_hdfs] [your_path]/conf/640_n_14_k_10/ecdag_decode_640_ppr_10  0 1 2 3 4 4086 5
