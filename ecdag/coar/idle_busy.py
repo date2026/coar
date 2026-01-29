@@ -64,12 +64,18 @@ class NodeStatePredictor:
             return 1 if smoothed_cpu > (self.threshold * 0.7) else 0
         else:
             return 1 if smoothed_cpu > (self.threshold * 1.3) else 0
-def get_migration_straggler_decision(all_node_cpus, all_node_timestamps, predictor):
+
+
+def get_migration_straggler_decision(all_node_cpus, all_node_timestamps, predictor, stats, k):
+
     node_states = []
     source_node_idx = -1
-    target_node_idx = -1
+    
+    idle_node_indices = []
     
     node_num = len(all_node_cpus)
+    dw_bw_list = stats.get("download_bandwidth", [])
+    gf_bw_list = stats.get("gf_bandwidth", [])
 
     for i in range(node_num):
         cpu_series = np.array(all_node_cpus[i])
@@ -85,9 +91,28 @@ def get_migration_straggler_decision(all_node_cpus, all_node_timestamps, predict
         
         if state == 1 and source_node_idx == -1:
             source_node_idx = i
-        elif state == 0 and target_node_idx == -1:
-            target_node_idx = i
-                
+        
+        elif state == 0:
+            idle_node_indices.append(i)
+    
+    target_node_idx = -1
+    max_score = -1.0
+    
+    for idx in idle_node_indices:
+        if idx >= len(dw_bw_list) or idx >= len(gf_bw_list):
+            continue
+            
+        dbw = dw_bw_list[idx]
+        gbw = gf_bw_list[idx]
+        
+        if dbw < 0 or gbw < 0:
+            continue
+            
+        current_score = min(dbw / (k - 1), gbw / k)
+        
+        if current_score > max_score:
+            max_score = current_score
+            target_node_idx = idx
 
     return source_node_idx, target_node_idx, np.array(node_states)
 
@@ -100,8 +125,13 @@ if __name__ == "__main__":
 
     node_cpus = [[8.76, 22.84, 8.30], [95.99, 92.82, 95.65], [95.91, 58.98, 94.94], [8.30, 7.58, 8.28], [98.30, 95.58, 96.29], [7.70, 37.44, 8.80], [99.65, 92.60, 98.25], [15.03, 8.30, 7.58], [95.17, 95.33, 98.70], [8.35, 7.34, 8.32], [92.13, 96.55, 88.99], [7.57, 10.64, 7.37], [95.80, 95.94, 90.65], [8.78, 7.56, 8.29]]
     node_times = [ ["2026-01-28 10:11:00", "2026-01-28 10:11:05", "2026-01-28 10:11:10"] for _ in range(len(node_cpus)) ] 
+    stats = {
+        "download_bandwidth": [1342.5, 1288.4, 1415.2, 1306.8, 1462.1, 1295.7, 1384.3, -1, 1433.6, 1478.9, 1355.4, 1392.1, 1321.8, 1445.7],
+        "gf_bandwidth": [1178.234, 1162.512, 1205.884, 1148.921, 1422.356, 1155.672, 1189.431, -1, 1212.556, 1431.125, 1174.889, 1195.342, 1168.455, 1418.667]
+    }
 
-    src, dst, states = get_migration_straggler_decision(node_cpus, node_times, predictor)
+
+    src, dst, states = get_migration_straggler_decision(node_cpus, node_times, predictor, stats, k=3)
 
     if src != -1 and dst != -1:
         print(f"src: {src}, dst: {dst}")
