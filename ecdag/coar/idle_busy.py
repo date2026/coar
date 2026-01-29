@@ -110,7 +110,7 @@ def get_migration_straggler_decision(all_node_cpus, all_node_timestamps, src_can
             
         current_score = min(dbw / (k - 1), gbw / k)
         
-        if current_score > max_score:
+        if current_score > max_score or idx in src_candidates:
             max_score = current_score
             target_node_idx = idx
 
