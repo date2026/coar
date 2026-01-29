@@ -41,8 +41,8 @@ sudo tc qdisc add dev eth0 root handle 1:0 htb default 2
 # sudo tc class add dev eth0 parent 1:0 classid 1:1 htb rate 12000Mbit ceil 12000Mbit burst 0
 # sudo tc class add dev eth0 parent 1:0 classid 1:1 htb rate 13000Mbit ceil 13000Mbit burst 0
 # sudo tc class add dev eth0 parent 1:0 classid 1:1 htb rate 14000Mbit ceil 14000Mbit burst 0
-# sudo tc class add dev eth0 parent 1:0 classid 1:1 htb rate 15000Mbit ceil 15000Mbit burst 0
-sudo tc class add dev eth0 parent 1:0 classid 1:1 htb rate 50000Mbit ceil 50000Mbit burst 0
+sudo tc class add dev eth0 parent 1:0 classid 1:1 htb rate 15000Mbit ceil 15000Mbit burst 0
+# sudo tc class add dev eth0 parent 1:0 classid 1:1 htb rate 50000Mbit ceil 50000Mbit burst 0
 
 
 for((i=1;i<=$host_num;i++)); do
