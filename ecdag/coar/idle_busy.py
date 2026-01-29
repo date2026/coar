@@ -131,7 +131,7 @@ if __name__ == "__main__":
     }
 
 
-    src, dst, states = get_migration_straggler_decision(node_cpus, node_times, predictor, stats, k=3)
+    src, dst, states = get_migration_straggler_decision(node_cpus, node_times, predictor, stats, k=10)
 
     if src != -1 and dst != -1:
         print(f"src: {src}, dst: {dst}")
