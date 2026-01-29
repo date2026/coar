@@ -66,7 +66,7 @@ class NodeStatePredictor:
             return 1 if smoothed_cpu > (self.threshold * 1.3) else 0
 
 
-def get_migration_straggler_decision(all_node_cpus, all_node_timestamps, predictor, stats, k):
+def get_migration_straggler_decision(all_node_cpus, all_node_timestamps, src_candidates, predictor, stats, k):
 
     node_states = []
     source_node_idx = -1
@@ -89,7 +89,7 @@ def get_migration_straggler_decision(all_node_cpus, all_node_timestamps, predict
         state = predictor.predict_state(curr_cpu, curr_time, window)
         node_states.append(state)
         
-        if state == 1 and source_node_idx == -1:
+        if state == 1 and source_node_idx == -1 and i in src_candidates:
             source_node_idx = i
         
         elif state == 0:
@@ -129,9 +129,10 @@ if __name__ == "__main__":
         "download_bandwidth": [1342.5, 1288.4, 1415.2, 1306.8, 1462.1, 1295.7, 1384.3, -1, 1433.6, 1478.9, 1355.4, 1392.1, 1321.8, 1445.7],
         "gf_bandwidth": [1178.234, 1162.512, 1205.884, 1148.921, 1422.356, 1155.672, 1189.431, -1, 1212.556, 1431.125, 1174.889, 1195.342, 1168.455, 1418.667]
     }
+    src_candidates = [0, 1, 3, 4]
 
 
-    src, dst, states = get_migration_straggler_decision(node_cpus, node_times, predictor, stats, k=10)
+    src, dst, states = get_migration_straggler_decision(node_cpus, node_times, src_candidates, predictor, stats, k=10)
 
     if src != -1 and dst != -1:
         print(f"src: {src}, dst: {dst}")
