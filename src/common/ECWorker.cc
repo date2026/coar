@@ -1084,8 +1084,6 @@ std::pair<timeval, timeval> ECWorker::execEncodeECTaskParallel(const std::string
     gettimeofday(&encodeStart, NULL);
     char* encodeBuf = new char[objSizeByte];            // will insert into objBuffer, free by objBuffer
     memset(encodeBuf, 0, objSizeByte); 
-    // #define MULTI_CHUNK_NUM 1
-    // for (int i = 0; i < MULTI_CHUNK_NUM; i++)
     RSPlan::encode(objBufs, encodeBuf, coefs, _conf->_rsParam.w, objSizeByte);
     objBuffer->insertObj(tmpObjId, encodeBuf);
     gettimeofday(&encodeEnd, NULL);
