@@ -157,9 +157,9 @@ class GFCostRecorderArray:
 
 
 if __name__ == "__main__":
-    df1 = pd.read_csv('../script/sysstat/resource_profile_data/node.csv', 
+    df1 = pd.read_csv('./script/sysstat/resource_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'cpu', 'mem_percent'])
-    df2 = pd.read_csv('../script/sysstat/throughput_profile_data/node.csv', 
+    df2 = pd.read_csv('./script/sysstat/throughput_profile_data/node06.csv', 
                       header=None, names=['timestamp', 'time', 'size', 'throughput', 'download', 'upload'])
 
 
