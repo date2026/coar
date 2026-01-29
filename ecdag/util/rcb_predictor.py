@@ -96,9 +96,9 @@ class GFCostRecorderArray:
 
     def _train_single_node(self, node_idx):
         try:
-            df1 = pd.read_csv(f'[your path]/script/sysstat/resource_profile_data/node.csv', 
+            df1 = pd.read_csv(f'[your path]/script/sysstat/resource_profile_data/sample.csv', 
                       header=None, names=['timestamp', 'cpu', 'mem_percent'])
-            df2 = pd.read_csv(f'[your path]/script/sysstat/throughput_profile_data/node.csv', 
+            df2 = pd.read_csv(f'[your path]/script/sysstat/throughput_profile_data/sample.csv', 
                       header=None, names=['timestamp', 'time', 'size', 'throughput', 'download', 'upload'])
 
             data = pd.concat([df1[['cpu']], df2[['throughput']]], axis=1)
