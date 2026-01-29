@@ -5,8 +5,8 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s [%(filename)s:%(lineno)d] %(levelname)s  - %(message)s'
 )
-SLICE_NUM = 4
-# SLICE_NUM = 64
+COLLECTOR_NUM = 4
+# COLLECTOR_NUM = 64
 
 def solve_lp_problem(n, k, S, a, b, c):
     """
@@ -25,15 +25,15 @@ def solve_lp_problem(n, k, S, a, b, c):
 
     model = cpx.Model(name="node_allocation")
     
-    x_int = model.integer_var_list(n, lb=0, ub=SLICE_NUM, name="x_int")
-    y_int = model.integer_var_list(n, lb=0, ub=SLICE_NUM, name="y_int")
+    x_int = model.integer_var_list(n, lb=0, ub=COLLECTOR_NUM, name="x_int")
+    y_int = model.integer_var_list(n, lb=0, ub=COLLECTOR_NUM, name="y_int")
     
-    x = [xi / SLICE_NUM for xi in x_int]
-    y = [yi / SLICE_NUM for yi in y_int]
+    x = [xi / COLLECTOR_NUM for xi in x_int]
+    y = [yi / COLLECTOR_NUM for yi in y_int]
     
     # one node could not contribute more than one total chunk to responsible
     for i in range(n):
-        model.add_constraint(x_int[i] + y_int[i] <= SLICE_NUM, f"sum_xy_{i}_le_16")
+        model.add_constraint(x_int[i] + y_int[i] <= COLLECTOR_NUM, f"sum_xy_{i}_le_16")
     
     
     # repair ratio constraint: x1 + x2 + ... + xn = 1
@@ -69,7 +69,7 @@ def solve_lp_problem(n, k, S, a, b, c):
         for i in range(n):
             xi_val = solution.get_value(x[i])
             yi_val = solution.get_value(y[i])
-            # print(f"node {i}: repair ratio: {xi_val*SLICE_NUM:.4f}/SLICE_NUM, help ratio: {yi_val*SLICE_NUM:.4f}/SLICE_NUM")
+            # print(f"node {i}: repair ratio: {xi_val*COLLECTOR_NUM:.4f}/COLLECTOR_NUM, help ratio: {yi_val*COLLECTOR_NUM:.4f}/COLLECTOR_NUM")
         
         for i in range(n):
             xi_val = solution.get_value(x[i])
@@ -84,5 +84,5 @@ def solve_lp_problem(n, k, S, a, b, c):
         y_values = [solution.get_value(yi)  for yi in y]
         return x_values, y_values
     else:
-        assert (false and "no solution")
+        assert (False and "no solution")
 

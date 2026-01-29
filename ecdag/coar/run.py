@@ -76,8 +76,8 @@ ecdag file need ids start from 0
 """
 def GenerateECDAGFG(all_node_ids, obj_ids, row_ids, nd, src_node_ids, repair_ratios, help_ratios, matrix, n, k, output):
 
-    repair_slices = [round(r * plan.SLICE_NUM) for r in repair_ratios]
-    help_slices = [round(h * plan.SLICE_NUM) for h in help_ratios]
+    repair_slices = [round(r * plan.COLLECTOR_NUM) for r in repair_ratios]
+    help_slices = [round(h * plan.COLLECTOR_NUM) for h in help_ratios]
 
     # repair_slices = [3, 0, 3, 3, 3, 3, 1, 0]
     # help_slices = [5, 8, 5, 5, 5, 5, 7, 8]   

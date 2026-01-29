@@ -158,9 +158,9 @@ if __name__ == "__main__":
     CHUNK_SIZE = 64                                     # MB
     ALPHA = get_alpha()   
     FAIL_CHUNKS = 4
-    SLICE_NUM = 4
+    COLLECTOR_NUM = 4
 
-    plan = schedule_coar_sr(src_ids, stats, K_PARAM, CHUNK_SIZE, ALPHA, FAIL_CHUNKS, SLICE_NUM, coar_ids)
+    plan = schedule_coar_sr(src_ids, stats, K_PARAM, CHUNK_SIZE, ALPHA, FAIL_CHUNKS, COLLECTOR_NUM, coar_ids)
 
     print(f"{'Chunk':<6} | {'Node':<5} | {'Type'}")
     print("-" * 40)
