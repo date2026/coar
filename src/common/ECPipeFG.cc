@@ -341,8 +341,8 @@ std::pair<timeval, timeval> ECWorker::execEncodeECPipeFGTaskParallel(const std::
         char* encodeBuf = new char[sliceSizeByte];                          // free after send task or persist task
         memset(encodeBuf, 0, sliceSizeByte);
         gettimeofday(&sliceStart, NULL);
-        #define MULTI_CHUNK_NUM 1
-        for (int i = 0; i < MULTI_CHUNK_NUM; i++)
+        // #define MULTI_CHUNK_NUM 1
+        // for (int i = 0; i < MULTI_CHUNK_NUM; i++)
         RSPlan::encode(sliceBufs, encodeBuf, coefs, _conf->_rsParam.w, sliceSizeByte);
         gettimeofday(&sliceEnd, NULL);
         sliceEncodeTime += RedisUtil::duration(sliceStart, sliceEnd);
@@ -399,12 +399,12 @@ std::pair<timeval, timeval> ECWorker::execPersistECPipeFGTaskParallel(const std:
         LOG_INFO("execPersistECPipeTaskParallel, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d, sliceId: %d", filename.c_str(), nodeId, objId, tmpObjId, i);    
     }
 
-    #define PERSIST_MULTI_CHUNK_NUM 1
-    for (int i = 0; i < PERSIST_MULTI_CHUNK_NUM; i++) {
+    // #define PERSIST_MULTI_CHUNK_NUM 1
+    // for (int i = 0; i < PERSIST_MULTI_CHUNK_NUM; i++) {
     hdfsFile file = _hdfsHandler->openFile(objname, HDFSMode::WRITE);
     _hdfsHandler->write2HDFS(file, objBuf, sizeByte);
     _hdfsHandler->closeFile(file);
-    }
+    // }
     delete [] objBuf;
     gettimeofday(&persistEnd, NULL);
     LOG_INFO("execPersistECPipeTaskParallel done, filename: %s, nodeId: %d, objId: %d, tmpObjId: %d, leftBound: %d, rightBound: %d, persist time: %f ms", 
