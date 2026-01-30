@@ -3,7 +3,7 @@
 Instal the following libraries and tools first.
 
 
-### Basie Tools
+### Basic Tools
 ```bash
 # CMake 3.1, g++ 4.8.4 or higher
 sudo apt-get update
