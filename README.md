@@ -39,6 +39,19 @@ tar -zxvf gf-complete.tar.gz
 cd gf-complete
 ./autogen.sh && ./configure
 make && sudo make install
+
+# install grpc according to https://grpc.org.cn/docs/languages/cpp/quickstart/
+git clone --recurse-submodules -b v1.74.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc
+cd grpc
+mkdir -p cmake/build
+cd cmake/build
+cmake -DgRPC_INSTALL=ON \
+      -DgRPC_BUILD_TESTS=OFF \
+      -DCMAKE_CXX_STANDARD=17 \
+      -DCMAKE_INSTALL_PREFIX=$MY_INSTALL_DIR \
+      ../..
+make -j 4
+make install
 ```
 
 ### Hadoop & Spark Requirements
