@@ -1,6 +1,6 @@
 # Preparation
 
-Instal the following libraries and tools first.
+Install the following libraries and tools first.
 
 
 ### Basic Tools
