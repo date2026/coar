@@ -40,9 +40,12 @@ cd gf-complete
 ./autogen.sh && ./configure
 make && sudo make install
 
-# install grpc according to https://grpc.org.cn/docs/languages/cpp/quickstart/
+# install grpc according to https://grpc.io/docs/languages/cpp/quickstart/
 git clone --recurse-submodules -b v1.74.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc
 cd grpc
+export MY_INSTALL_DIR=$HOME/.local
+mkdir -p $MY_INSTALL_DIR
+export PATH="$MY_INSTALL_DIR/bin:$PATH"
 mkdir -p cmake/build
 cd cmake/build
 cmake -DgRPC_INSTALL=ON \
